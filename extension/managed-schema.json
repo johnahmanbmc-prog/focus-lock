@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "config": {
+      "title": "Focus Lock configuration",
+      "description": "The full configuration as a JSON string, in the same shape as default-config.json. When set, it replaces the bundled defaults.",
+      "type": "string"
+    }
+  }
+}

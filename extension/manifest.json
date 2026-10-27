@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Focus Lock",
+  "version": "0.1.0",
+  "description": "Blocks distracting websites by domain, URL, keyword and genre.",
+  "minimum_chrome_version": "116",
+  "permissions": ["declarativeNetRequest", "storage", "alarms", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "storage": { "managed_schema": "managed-schema.json" },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["lib/match.js", "content.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "web_accessible_resources": [
+    { "resources": ["blocked.html"], "matches": ["<all_urls>"] }
+  ]
+}
