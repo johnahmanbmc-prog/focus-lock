@@ -1,0 +1,38 @@
+{
+  "schedule": null,
+  "websites": [
+    "netflix.com",
+    "primevideo.com",
+    "disneyplus.com",
+    "hulu.com",
+    "max.com",
+    "tv.apple.com",
+    "crunchyroll.com",
+    "twitch.tv",
+    "tiktok.com"
+  ],
+  "urls": [
+    "amazon.com/gp/video",
+    "amazon.co.uk/gp/video",
+    "reddit.com/r/fmovies",
+    "reddit.com/r/piracy"
+  ],
+  "keywords": {
+    "url": ["123movies", "fmovies", "soap2day", "putlocker", "gomovies", "watch free", "free movies online", "watch series free"],
+    "title": ["watch free", "123movies", "full movie free", "free movies online", "watch online free"],
+    "text": ["watch full movie free", "stream free in hd", "watch series online free"]
+  },
+  "genres": {
+    "blocked": ["video-streaming", "anime-streaming", "sports-streaming"],
+    "sites": {
+      "video-streaming": ["peacocktv.com", "paramountplus.com", "nowtv.com", "plex.tv", "pluto.tv", "tubitv.com"],
+      "anime-streaming": ["funimation.com", "hidive.com"],
+      "sports-streaming": ["dazn.com", "espn.com"]
+    }
+  },
+  "youtube": {
+    "mode": "genres",
+    "blockShorts": true,
+    "blockedGenres": ["Entertainment", "Gaming", "Comedy", "Film & Animation", "People & Blogs", "Sports"]
+  }
+}
