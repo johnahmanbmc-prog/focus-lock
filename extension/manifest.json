@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Focus Lock",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Blocks distracting websites by domain, URL, keyword and genre.",
   "minimum_chrome_version": "116",
   "permissions": ["declarativeNetRequest", "storage", "alarms", "tabs"],

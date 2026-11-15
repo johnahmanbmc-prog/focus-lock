@@ -70,8 +70,17 @@ function readSchedule() {
 }
 
 function render() {
-  const { settings, strict, active } = state;
-  const locked = strict;
+  const { settings, strict, active, managed, lastSync } = state;
+  const locked = strict || managed;
+
+  // When the desktop app manages the settings, this page only shows them.
+  $('managed').hidden = !managed;
+  if (managed) {
+    $('managedDetail').textContent = lastSync && lastSync.ok === false
+      ? 'The last update from the app was ignored because it ' + lastSync.reason + '.'
+      : lastSync ? 'Last update ' + new Date(lastSync.at).toLocaleString() + '.' : '';
+  }
+  document.querySelectorAll('#strict, #unlock').forEach(s => { s.hidden = managed; });
 
   if (strict) {
     $('status').textContent = 'Strict mode is on until ' + new Date(settings.strictUntil).toLocaleString() + '.';
@@ -118,17 +127,7 @@ async function change(changeSet, doneText) {
   } else {
     say(doneText);
   }
-  await $('requestUnlock').addEventListener('click', async () => {
-  if (confirm('Strict mode will end in 72 hours unless you cancel. Request an early unlock?')) {
-    await change({ requestUnlock: true }, 'Early unlock requested.');
-  }
-});
-
-$('cancelUnlock').addEventListener('click', () => change({ cancelUnlock: true }, 'Early unlock cancelled.'));
-
-$('rearm').addEventListener('click', () => change({ rearm: true }, 'Strict mode is on again.'));
-
-load();
+  await load();
 }
 
 async function load() {

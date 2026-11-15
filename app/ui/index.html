@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>Focus Lock</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="shell">
+    <nav class="side" aria-label="Sections">
+      <div class="brand"><span class="logo" aria-hidden="true"></span>Focus Lock</div>
+      <button class="nav active" data-page="overview">Overview</button>
+      <button class="nav" data-page="hours">Blocking hours</button>
+      <button class="nav" data-page="lists">Block lists</button>
+      <button class="nav" data-page="strict">Strict mode</button>
+      <button class="nav" data-page="browsers">Browsers</button>
+      <button class="nav" data-page="history">History</button>
+      <div class="side-foot" id="sideStatus"></div>
+    </nav>
+
+    <main>
+      <div id="toast" role="status" hidden></div>
+
+      <!-- Overview -->
+      <section class="page" id="page-overview">
+        <div class="hero" id="hero">
+          <div>
+            <p class="eyebrow">Right now</p>
+            <h1 id="heroTitle">Loading…</h1>
+            <p id="heroDetail" class="muted"></p>
+          </div>
+          <div class="hero-chips" id="heroChips"></div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h2>Blocker</h2>
+            <label class="switch">
+              <input type="checkbox" id="enabled">
+              <span class="track" aria-hidden="true"></span>
+              <span>Blocker on</span>
+            </label>
+            <p class="muted small" id="enabledNote"></p>
+          </div>
+          <div class="card">
+            <h2>This week</h2>
+            <div class="week" id="weekBar" aria-label="Blocking hours this week"></div>
+            <p class="muted small"><button class="link" data-goto="hours">Edit blocking hours</button></p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Waiting changes</h2>
+          <p class="muted small">Changes that make the blocker looser wait 24 hours before they happen. You can cancel them any time before then.</p>
+          <ul class="pending" id="pendingList"></ul>
+        </div>
+      </section>
+
+      <!-- Hours -->
+      <section class="page" id="page-hours" hidden>
+        <header class="page-head">
+          <h1>Blocking hours</h1>
+          <p class="muted">YouTube, social media, streaming and your own sites are blocked during these hours. Adult and pirate sites are blocked all the time.</p>
+        </header>
+        <div class="card">
+          <div class="lockline" id="hoursLock" hidden></div>
+          <div id="windows"></div>
+          <div class="row">
+            <button id="addWindow">Add time window</button>
+            <span class="spacer"></span>
+            <button id="saveHours" class="primary">Save hours</button>
+          </div>
+          <p class="muted small">A window that ends before it starts runs past midnight. Set the same start and end time to block the whole day.
+            Adding hours takes effect right away. Removing or shortening hours waits 24 hours.</p>
+        </div>
+        <div class="card">
+          <h2>Preview</h2>
+          <div class="week" id="weekBarEdit"></div>
+        </div>
+      </section>
+
+      <!-- Lists -->
+      <section class="page" id="page-lists" hidden>
+        <header class="page-head">
+          <h1>Block lists</h1>
+          <p class="muted">Turning a list on, or adding a site, happens right away. Turning a list off or removing a site waits 24 hours, and is not possible during strict mode.</p>
+        </header>
+        <div class="card">
+          <h2>During blocking hours</h2>
+          <div id="categories" class="cats"></div>
+        </div>
+        <div class="card">
+          <h2>Always blocked</h2>
+          <p class="muted small">These stay on whenever the blocker is on, at any hour. They can't be turned off here.</p>
+          <ul class="always" id="alwaysList"></ul>
+        </div>
+        <div class="card">
+          <h2>Your sites</h2>
+          <form class="row" id="siteForm">
+            <input id="siteInput" placeholder="example.com or example.com/videos" autocomplete="off" aria-label="Website to block">
+            <label class="check"><input type="checkbox" id="siteAlways"> All the time</label>
+            <button class="primary" type="submit">Block site</button>
+          </form>
+          <ul class="items" id="siteList"></ul>
+        </div>
+        <div class="card">
+          <h2>Your keywords</h2>
+          <p class="muted small">Blocks pages whose address, search or title contains the phrase, during blocking hours.</p>
+          <form class="row" id="keywordForm">
+            <input id="keywordInput" placeholder="for example: full episode" autocomplete="off" aria-label="Keyword to block">
+            <button class="primary" type="submit">Block keyword</button>
+          </form>
+          <ul class="items" id="keywordList"></ul>
+        </div>
+      </section>
+
+      <!-- Strict -->
+      <section class="page" id="page-strict" hidden>
+        <header class="page-head">
+          <h1>Strict mode</h1>
+          <p class="muted">Strict mode locks your blocking hours, your lists and the off switch until the end time. You can still add hours, add sites and extend strict mode.</p>
+        </header>
+        <div class="card">
+          <h2 id="strictHeading">Start strict mode</h2>
+          <p id="strictState" class="muted"></p>
+          <div class="row presets" id="presets">
+            <button data-days="1">1 day</button>
+            <button data-days="3">3 days</button>
+            <button data-days="7">1 week</button>
+            <button data-days="14">2 weeks</button>
+            <button data-days="30">30 days</button>
+          </div>
+          <div class="row">
+            <label for="until">Lock until</label>
+            <input type="datetime-local" id="until">
+            <button id="startStrict" class="primary">Start strict mode</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Early unlock</h2>
+          <p class="muted small">An emergency way out. Request it and strict mode ends 72 hours later. Your hours and lists stay as they are,
+            and you can re-arm strict mode with one click afterwards.</p>
+          <p id="unlockState"></p>
+          <div class="countdown" id="unlockCountdown" hidden></div>
+          <div class="row">
+            <button id="requestUnlock">Request early unlock</button>
+            <button id="cancelUnlock">Cancel early unlock</button>
+            <button id="rearm" class="primary">Re-arm strict mode</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Browsers -->
+      <section class="page" id="page-browsers" hidden>
+        <header class="page-head">
+          <h1>Browsers</h1>
+          <p class="muted">Chrome and Brave read their settings from this app every minute. If the app is closed, they keep the last settings they got.</p>
+        </header>
+        <div class="grid" id="browserCards"></div>
+        <div class="card">
+          <h2>Set up the extension</h2>
+          <ol class="steps">
+            <li>In Chrome open <code>chrome://extensions</code>, or in Brave open <code>brave://extensions</code>.</li>
+            <li>Turn on <b>Developer mode</b> (top right).</li>
+            <li>Click <b>Load unpacked</b> and pick the extension folder. <button class="link" id="openExtension">Open the extension folder</button></li>
+            <li>Come back here. The browser shows as connected within a minute.</li>
+          </ol>
+          <p class="muted small">Once connected, the extension's own settings page becomes read-only and says it is managed by this app.</p>
+        </div>
+      </section>
+
+      <!-- History -->
+      <section class="page" id="page-history" hidden>
+        <header class="page-head">
+          <h1>History</h1>
+          <p class="muted">The last 50 changes.</p>
+        </header>
+        <div class="card"><ul class="log" id="logList"></ul></div>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

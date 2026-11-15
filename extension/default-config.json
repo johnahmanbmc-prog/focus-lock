@@ -1,14 +1,5 @@
 {
-  "websites": [
-    "netflix.com",
-    "primevideo.com",
-    "disneyplus.com",
-    "hulu.com",
-    "max.com",
-    "tv.apple.com",
-    "crunchyroll.com",
-    "twitch.tv"
-  ],
+  "websites": [],
   "urls": [
     "amazon.com/gp/video",
     "amazon.co.uk/gp/video",
@@ -48,6 +39,13 @@
     ],
     "sites": {
       "video-streaming": [
+        "netflix.com",
+        "primevideo.com",
+        "disneyplus.com",
+        "hulu.com",
+        "max.com",
+        "tv.apple.com",
+        "twitch.tv",
         "peacocktv.com",
         "paramountplus.com",
         "nowtv.com",
@@ -56,6 +54,7 @@
         "tubitv.com"
       ],
       "anime-streaming": [
+        "crunchyroll.com",
         "funimation.com",
         "hidive.com"
       ],

@@ -2,7 +2,10 @@
 // rules in step with the schedule, and answers the content script.
 importScripts('lib/match.js');
 
-const { isBlockingActive, buildDnrRules, defaultSettings, isStrict, applySettingsChange, effectiveConfig } = self.FocusMatch;
+const { isBlockingActive, buildDnrRules, defaultSettings, isStrict, applySettingsChange, effectiveConfig, applyAppLists, syncAllowed } = self.FocusMatch;
+
+// The Focus Lock desktop app serves the settings here. See app/core/server.js.
+const APP_URL = 'http://127.0.0.1:47821/v1/state';
 
 let cachedConfig = null;
 
@@ -19,16 +22,66 @@ async function loadConfig() {
   return response.json();
 }
 
+// The last settings and lists the desktop app sent, or null if the app has
+// never been seen. Once set, the app manages this extension.
+async function getAppState() {
+  const { appState } = await chrome.storage.local.get('appState');
+  return appState || null;
+}
+
 async function getConfig() {
-  if (!cachedConfig) cachedConfig = await loadConfig();
+  if (!cachedConfig) {
+    const [base, appState] = await Promise.all([loadConfig(), getAppState()]);
+    cachedConfig = appState ? applyAppLists(base, appState.lists) : base;
+  }
   return cachedConfig;
 }
 
-// The user's settings (on/off, blocking hours, strict mode) live in local
-// storage and are only changed through applySettingsChange.
+// The user's settings (on/off, blocking hours, strict mode). They come from
+// the desktop app when it manages this extension, otherwise from local
+// storage, changed only through applySettingsChange.
 async function getSettings() {
+  const appState = await getAppState();
+  if (appState) return { ...defaultSettings(), ...appState.settings };
   const { settings } = await chrome.storage.local.get('settings');
   return { ...defaultSettings(), ...(settings || {}) };
+}
+
+async function browserName() {
+  try {
+    if (navigator.brave && await navigator.brave.isBrave()) return 'Brave';
+  } catch (e) { /* not Brave */ }
+  const brands = (navigator.userAgentData && navigator.userAgentData.brands) || [];
+  return brands.some(b => /brave/i.test(b.brand)) ? 'Brave' : 'Chrome';
+}
+
+// Ask the desktop app for the current settings. If it isn't running, keep
+// what we have.
+async function syncFromApp() {
+  let incoming;
+  try {
+    const query = '?browser=' + encodeURIComponent(await browserName()) +
+      '&version=' + encodeURIComponent(chrome.runtime.getManifest().version);
+    const response = await fetch(APP_URL + query, { cache: 'no-store' });
+    if (!response.ok) return;
+    incoming = await response.json();
+  } catch (e) {
+    return;
+  }
+  const cached = await getAppState();
+  const verdict = syncAllowed(cached, incoming, Date.now());
+  if (!verdict.ok) {
+    console.warn('Focus Lock: ignored settings from the app because it ' + verdict.reason);
+    await chrome.storage.local.set({ lastSync: { at: Date.now(), ok: false, reason: verdict.reason } });
+    return;
+  }
+  const next = { settings: incoming.settings, lists: incoming.lists };
+  const changed = !cached || JSON.stringify({ settings: cached.settings, lists: cached.lists }) !== JSON.stringify(next);
+  await chrome.storage.local.set({ appState: next, lastSync: { at: Date.now(), ok: true } });
+  if (changed) {
+    cachedConfig = null;
+    await applyRules();
+  }
 }
 
 function inHours(settings) {
@@ -59,18 +112,22 @@ async function updateRules() {
   });
 }
 
+function tick() {
+  return syncFromApp().finally(applyRules);
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create('tick', { periodInMinutes: 1 });
-  applyRules();
+  tick();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   chrome.alarms.create('tick', { periodInMinutes: 1 });
-  applyRules();
+  tick();
 });
 
 chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name === 'tick') applyRules();
+  if (alarm.name === 'tick') tick();
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
@@ -86,13 +143,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type === 'getSettings') {
-    getSettings().then(settings => {
-      sendResponse({ settings, strict: isStrict(settings, Date.now()), active: inHours(settings) });
-    });
+    syncFromApp()
+      .then(() => Promise.all([getSettings(), getAppState(), chrome.storage.local.get('lastSync')]))
+      .then(([settings, appState, { lastSync }]) => {
+        sendResponse({
+          settings,
+          strict: isStrict(settings, Date.now()),
+          active: inHours(settings),
+          managed: Boolean(appState),
+          lastSync: lastSync || null
+        });
+      });
     return true;
   }
   if (message.type === 'changeSettings') {
-    getSettings()
+    getAppState()
+      .then(appState => {
+        if (appState) throw new Error('These settings are managed by the Focus Lock desktop app. Change them there.');
+        return getSettings();
+      })
       .then(current => applySettingsChange(current, message.change || {}, Date.now()))
       .then(async settings => {
         await chrome.storage.local.set({ settings });
@@ -111,6 +180,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
 
-// Also apply on every worker start, so the rules never wait for an event.
+// Also sync and apply on every worker start, so the rules never wait for an event.
 chrome.alarms.create('tick', { periodInMinutes: 1 });
-applyRules();
+tick();

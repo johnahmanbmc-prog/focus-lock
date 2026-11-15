@@ -7,9 +7,11 @@ const m = require('../extension/lib/match.js');
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../extension/default-config.json'), 'utf8'));
 
 test('website blocking covers subdomains', () => {
-  assert.equal(m.siteBlockReason('https://www.netflix.com/browse', config), 'website: netflix.com');
-  assert.equal(m.siteBlockReason('https://help.netflix.com/', config), 'website: netflix.com');
-  assert.equal(m.siteBlockReason('https://notnetflix.com/', config), null);
+  const sites = { ...config, websites: ['netflix.com'] };
+  assert.equal(m.siteBlockReason('https://www.netflix.com/browse', sites), 'website: netflix.com');
+  assert.equal(m.siteBlockReason('https://help.netflix.com/', sites), 'website: netflix.com');
+  assert.equal(m.siteBlockReason('https://notnetflix.com/', sites), null);
+  assert.equal(m.siteBlockReason('https://www.netflix.com/browse', config), 'genre: video-streaming');
 });
 
 test('URL blocking matches a path, not the whole site', () => {

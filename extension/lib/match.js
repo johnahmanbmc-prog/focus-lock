@@ -163,13 +163,15 @@
       const keywords = cfg.keywords || {};
       return {
         ...cfg,
+        websites: union(cfg.websites, always.websites),
+        urls: union(cfg.urls, always.urls),
         keywords: { ...keywords, url: union(keywords.url, always.keywords), title: union(keywords.title, always.keywords) },
         genres: { ...genres, blocked: union(genres.blocked, always.genres) }
       };
     }
     return {
-      websites: [],
-      urls: [],
+      websites: always.websites || [],
+      urls: always.urls || [],
       keywords: { url: always.keywords || [], title: always.keywords || [], text: [] },
       genres: { blocked: always.genres || [], sites: genres.sites || {} },
       youtube: { mode: 'off' },
@@ -302,7 +304,113 @@
     return rules;
   }
 
+  // ---- Desktop app sync --------------------------------------------------
+
+  // Which minutes of the week (Sunday 00:00 = 0) a schedule blocks, with
+  // the same meaning as isBlockingActive. app/core/rules.js has a copy.
+  function coverage(schedule) {
+    const week = new Uint8Array(7 * 1440);
+    for (const w of schedule || []) {
+      const start = minutesOf(w.start);
+      const end = minutesOf(w.end);
+      for (const day of w.days || []) {
+        const base = day * 1440;
+        if (start === end) {
+          week.fill(1, base, base + 1440);
+        } else if (start < end) {
+          week.fill(1, base + start, base + end);
+        } else {
+          week.fill(1, base + start, base + 1440);
+          const next = ((day + 1) % 7) * 1440;
+          week.fill(1, next, next + end);
+        }
+      }
+    }
+    return week;
+  }
+
+  function scheduleCovers(a, b) {
+    const ca = coverage(a);
+    const cb = coverage(b);
+    for (let i = 0; i < cb.length; i++) if (cb[i] && !ca[i]) return false;
+    return true;
+  }
+
+  const APP_GENRES = ['social-media', 'video-streaming', 'anime-streaming', 'sports-streaming'];
+
+  // Puts the lists from the desktop app on top of the base config: which
+  // lists are on, plus the user's own sites and keywords.
+  function applyAppLists(base, lists) {
+    const cfg = JSON.parse(JSON.stringify(base || {}));
+    if (!lists) return cfg;
+    const cats = lists.categories || {};
+    cfg.genres = cfg.genres || { blocked: [], sites: {} };
+    let blocked = (cfg.genres.blocked || []).filter(g => !(APP_GENRES.includes(g) && cats[g] === false));
+    for (const g of APP_GENRES) if (cats[g] === true && !blocked.includes(g)) blocked.push(g);
+    cfg.genres.blocked = blocked;
+    if (cats.youtube === false) cfg.youtube = { ...(cfg.youtube || {}), mode: 'off', blockShorts: false };
+    else if (cats.youtube === true) cfg.youtube = { ...(cfg.youtube || {}), mode: 'full', blockShorts: true };
+
+    cfg.websites = [...(cfg.websites || [])];
+    cfg.urls = [...(cfg.urls || [])];
+    cfg.alwaysOn = { ...(cfg.alwaysOn || {}) };
+    cfg.alwaysOn.websites = [...(cfg.alwaysOn.websites || [])];
+    cfg.alwaysOn.urls = [...(cfg.alwaysOn.urls || [])];
+    for (const entry of lists.sites || []) {
+      const site = String(entry.site || '').toLowerCase();
+      if (!site) continue;
+      const isUrl = site.includes('/');
+      const target = entry.always
+        ? (isUrl ? cfg.alwaysOn.urls : cfg.alwaysOn.websites)
+        : (isUrl ? cfg.urls : cfg.websites);
+      if (!target.includes(site)) target.push(site);
+    }
+    const keywords = { ...(cfg.keywords || {}) };
+    keywords.url = union(keywords.url, lists.keywords);
+    keywords.title = union(keywords.title, lists.keywords);
+    cfg.keywords = keywords;
+    return cfg;
+  }
+
+  // Decides whether the extension takes new settings from the desktop app.
+  // While the settings it already has are in strict mode, it only takes
+  // settings that are at least as strict. That way a program pretending to
+  // be the app, or a hand-edited settings file, can't switch blocking off.
+  function syncAllowed(cached, incoming, now) {
+    if (!incoming || !incoming.settings || !incoming.lists) return { ok: false, reason: 'bad reply' };
+    if (!cached || !cached.settings || !isStrict(cached.settings, now)) return { ok: true };
+    const c = cached.settings;
+    const n = incoming.settings;
+    if (!n.enabled) return { ok: false, reason: 'turns the blocker off during strict mode' };
+    if (!(typeof n.strictUntil === 'number' && n.strictUntil >= c.strictUntil)) {
+      return { ok: false, reason: 'shortens strict mode' };
+    }
+    if (!scheduleCovers(n.schedule || [], c.schedule || [])) return { ok: false, reason: 'removes blocking hours during strict mode' };
+    if (typeof n.unlockAt === 'number') {
+      const kept = typeof c.unlockAt === 'number' && n.unlockAt >= c.unlockAt;
+      const fresh = n.unlockAt >= now + UNLOCK_DELAY - 10 * 60 * 1000;
+      if (!kept && !fresh) return { ok: false, reason: 'unlocks early without the 72 hour wait' };
+    }
+    const cl = cached.lists || {};
+    const nl = incoming.lists;
+    for (const [id, on] of Object.entries(cl.categories || {})) {
+      if (on !== false && (nl.categories || {})[id] === false) return { ok: false, reason: 'turns off a list during strict mode' };
+    }
+    for (const entry of cl.sites || []) {
+      const match = (nl.sites || []).find(s => s.site === entry.site);
+      if (!match || (entry.always && !match.always)) return { ok: false, reason: 'removes a site during strict mode' };
+    }
+    for (const keyword of cl.keywords || []) {
+      if (!(nl.keywords || []).includes(keyword)) return { ok: false, reason: 'removes a keyword during strict mode' };
+    }
+    return { ok: true };
+  }
+
   const api = {
+    coverage,
+    scheduleCovers,
+    applyAppLists,
+    syncAllowed,
     effectiveConfig,
     UNLOCK_DELAY,
     normalizeText,
