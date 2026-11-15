@@ -15,6 +15,7 @@ Setup is done by the person who holds the admin password. Follow **[docs/HELPER-
 1. Download **FocusLock-windows** from the latest **test** run in the Actions tab. It has `FocusLock-Setup-<version>.exe` and `dist-extension.zip`.
 2. Run the setup as administrator. It installs the app for all users in `C:\Program Files\Focus Lock`, creates `C:\ProgramData\FocusLock` (standard users can read but not change or delete it), and installs the **Focus Lock** Windows service.
 3. Publish `dist-extension.zip` to the Chrome Web Store as unlisted, then run `install.ps1 -ExtensionId <id>`. Chrome and Brave then install the extension themselves, and it can't be removed or turned off.
+4. Optionally run `admin/browser-block/Enable-BrowserBlock.ps1` (audit first, then `-Enforce`). This blocks 10+ other browsers (Firefox, Opera, Opera GX, Vivaldi, Tor, DuckDuckGo, Waterfox, LibreWolf, Floorp, Yandex and more) with App Control for Business. It's a blocklist, so every other program keeps running.
 
 To run it from source during development: `cd app`, `npm install`, `npm start`. With no service running, the app runs the engine itself and keeps the settings in its own folder.
 
@@ -99,7 +100,7 @@ A browser policy can supply the whole config as a JSON string under the extensio
 
 ### Limits
 
-Once the helper setup is done, a standard Windows account can't uninstall the app, stop the service, change or delete the settings, change the clock, or remove the extension from Chrome or Brave. Anyone with the admin password can. Microsoft Edge and other browsers aren't covered.
+Once the helper setup is done, a standard Windows account can't uninstall the app, stop the service, change or delete the settings, change the clock, or remove the extension from Chrome or Brave. Anyone with the admin password can. Other browsers are blocked once the helper turns on the browser block. Microsoft Edge isn't covered.
 
 ## Tests
 

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Focus Lock: deny rules for browsers other than Chrome and Brave.
+
+  This file only holds the deny rules. Enable-BrowserBlock.ps1 merges it with
+  Windows' own "AllowAll" example policy, so everything else keeps running
+  as normal: it is a blocklist, not an allowlist.
+
+  FileName matches the "original file name" stored inside each program, so
+  renaming the .exe or running a portable copy from any folder doesn't get
+  around it. Chrome (chrome.exe), Brave (brave.exe) and Edge (msedge.exe) are
+  not listed.
+
+  To add a browser: copy a Deny line with a new ID, put the program's
+  original file name in FileName (right-click the .exe > Properties >
+  Details > Original filename), add a FileRuleRef for it below, and run
+  Enable-BrowserBlock.ps1 again.
+-->
+<SiPolicy xmlns="urn:schemas-microsoft-com:sipolicy" PolicyType="Base Policy">
+  <VersionEx>10.0.0.0</VersionEx>
+  <PlatformID>{2E07F7E4-194C-4D20-B7C9-6F44A6C5A234}</PlatformID>
+  <Rules>
+    <Rule>
+      <Option>Enabled:Unsigned System Integrity Policy</Option>
+    </Rule>
+  </Rules>
+  <EKUs />
+  <FileRules>
+    <Deny ID="ID_DENY_BROWSER_1" FriendlyName="Firefox, Tor Browser and Mullvad Browser (firefox.exe)" FileName="firefox.exe" MinimumFileVersion="0.0.0.0" />
+    <Deny ID="ID_DENY_BROWSER_2" FriendlyName="Firefox private browsing launcher (private_browsing.exe)" FileName="private_browsing.exe" MinimumFileVersion="0.0.0.0" />
+    <Deny ID="ID_DENY_BROWSER_3" FriendlyName="Opera and Opera GX (opera.exe)" FileName="opera.exe" MinimumFileVersion="0.0.0.0" />
+    <Deny ID="ID_DENY_BROWSER_4" FriendlyName="Opera browser assistant (browser_assistant.exe)" FileName="browser_assistant.exe" MinimumFileVersion="0.0.0.0" />
+    <Deny ID="ID_DENY_BROWSER_6" FriendlyName="Vivaldi (vivaldi.exe)" FileName="vivaldi.exe" MinimumFileVersion="0.0.0.0" />
+    <Deny ID="ID_DENY_BROWSER_7" FriendlyName="Tor Browser launcher (tor.exe)" FileName="tor.exe" MinimumFileVersion="0.0.0.0" />
+    <Deny ID="ID_DENY_BROWSER_8" FriendlyName="DuckDuckGo (DuckDuckGo.exe)" FileName="DuckDuckGo.exe" MinimumFileVersion="0.0.0.0" />
+    <Deny ID="ID_DENY_BROWSER_9" FriendlyName="Waterfox (waterfox.exe)" FileName="waterfox.exe" MinimumFileVersion="0.0.0.0" />
+    <Deny ID="ID_DENY_BROWSER_10" FriendlyName="LibreWolf (librewolf.exe)" FileName="librewolf.exe" MinimumFileVersion="0.0.0.0" />
+    <Deny ID="ID_DENY_BROWSER_11" FriendlyName="Floorp (floorp.exe)" FileName="floorp.exe" MinimumFileVersion="0.0.0.0" />
+    <Deny ID="ID_DENY_BROWSER_12" FriendlyName="Yandex Browser (browser.exe)" FileName="browser.exe" MinimumFileVersion="0.0.0.0" />
+    <Deny ID="ID_DENY_BROWSER_14" FriendlyName="Arc (Arc.exe)" FileName="Arc.exe" MinimumFileVersion="0.0.0.0" />
+    <Deny ID="ID_DENY_BROWSER_15" FriendlyName="Zen Browser (zen.exe)" FileName="zen.exe" MinimumFileVersion="0.0.0.0" />
+    <Deny ID="ID_DENY_BROWSER_16" FriendlyName="Pale Moon (palemoon.exe)" FileName="palemoon.exe" MinimumFileVersion="0.0.0.0" />
+    <Deny ID="ID_DENY_BROWSER_17" FriendlyName="Mullvad Browser (mullvadbrowser.exe)" FileName="mullvadbrowser.exe" MinimumFileVersion="0.0.0.0" />
+  </FileRules>
+  <Signers />
+  <SigningScenarios>
+    <SigningScenario Value="131" ID="ID_SIGNINGSCENARIO_DRIVERS_1" FriendlyName="Kernel mode">
+      <ProductSigners />
+    </SigningScenario>
+    <SigningScenario Value="12" ID="ID_SIGNINGSCENARIO_WINDOWS" FriendlyName="User mode">
+      <ProductSigners>
+        <FileRulesRef>
+          <FileRuleRef RuleID="ID_DENY_BROWSER_1" />
+          <FileRuleRef RuleID="ID_DENY_BROWSER_2" />
+          <FileRuleRef RuleID="ID_DENY_BROWSER_3" />
+          <FileRuleRef RuleID="ID_DENY_BROWSER_4" />
+          <FileRuleRef RuleID="ID_DENY_BROWSER_6" />
+          <FileRuleRef RuleID="ID_DENY_BROWSER_7" />
+          <FileRuleRef RuleID="ID_DENY_BROWSER_8" />
+          <FileRuleRef RuleID="ID_DENY_BROWSER_9" />
+          <FileRuleRef RuleID="ID_DENY_BROWSER_10" />
+          <FileRuleRef RuleID="ID_DENY_BROWSER_11" />
+          <FileRuleRef RuleID="ID_DENY_BROWSER_12" />
+          <FileRuleRef RuleID="ID_DENY_BROWSER_14" />
+          <FileRuleRef RuleID="ID_DENY_BROWSER_15" />
+          <FileRuleRef RuleID="ID_DENY_BROWSER_16" />
+          <FileRuleRef RuleID="ID_DENY_BROWSER_17" />
+        </FileRulesRef>
+      </ProductSigners>
+    </SigningScenario>
+  </SigningScenarios>
+  <UpdatePolicySigners />
+  <CiSigners />
+  <HvciOptions>0</HvciOptions>
+  <BasePolicyID>{6F2E1A7B-3C4D-4E5F-8A9B-0C1D2E3F4A5B}</BasePolicyID>
+  <PolicyID>{6F2E1A7B-3C4D-4E5F-8A9B-0C1D2E3F4A5B}</PolicyID>
+  <Settings>
+    <Setting Provider="PolicyInfo" Key="Information" ValueName="Name">
+      <Value>
+        <String>Focus Lock browser deny rules</String>
+      </Value>
+    </Setting>
+  </Settings>
+</SiPolicy>

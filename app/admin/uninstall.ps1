@@ -33,4 +33,8 @@ foreach ($key in 'HKLM:\SOFTWARE\Policies\Google\Chrome', 'HKLM:\SOFTWARE\Polici
     Remove-ItemProperty -Path $key -Name $name -ErrorAction SilentlyContinue
   }
 }
+# Turn off the browser block too, if it was set up.
+$block = Join-Path $here 'browser-block\Disable-BrowserBlock.ps1'
+if (Test-Path (Join-Path $data 'browser-block\policy-id.txt')) { & $block }
+
 Remove-Item -Recurse -Force $data -ErrorAction SilentlyContinue

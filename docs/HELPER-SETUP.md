@@ -7,6 +7,7 @@ When it's done:
 - Yahya uses a **standard** Windows account. Only the admin account can uninstall Focus Lock, stop its service, or change or delete its files.
 - The Focus Lock app is installed in `C:\Program Files\Focus Lock`, and its settings are in `C:\ProgramData\FocusLock`. Standard users can read them but can't change or delete them.
 - Chrome and Brave install the extension themselves through browser policy, and it can't be removed or turned off. Incognito and guest windows are turned off, and so are Brave's Tor windows.
+- Other browsers (Firefox, Opera, Vivaldi, Tor and more) won't open. Other programs aren't affected.
 
 Yahya still changes his own hours, lists and strict mode in the app. The Focus Lock service applies the rules: looser changes wait 24 hours, and none are allowed during strict mode.
 
@@ -62,6 +63,50 @@ On a normal (not company-managed) Windows PC, Chrome and Brave only force-instal
 
 The ID is saved, so later Focus Lock updates keep the policy.
 
+## 6. Block other browsers
+
+This step blocks the browsers people use to get around a blocker, using App Control for Business, which is built into Windows 11 Pro. Chrome and Brave keep working, and Edge is left alone for now. **Everything else keeps working**: this is a blocklist of browsers, not an allowlist, so work programs install and run as normal.
+
+Blocked browsers:
+
+1. Firefox
+2. Opera
+3. Opera GX
+4. Vivaldi
+5. Tor Browser
+6. DuckDuckGo
+7. Waterfox
+8. LibreWolf
+9. Floorp
+10. Yandex Browser
+
+Arc, Zen, Pale Moon and Mullvad Browser are blocked too.
+
+Windows checks the name each program has stored inside it, not the file name. So renaming the .exe, using a portable copy from Downloads or a USB stick, or installing from the Microsoft Store doesn't get around the block. You don't need to block the Store itself.
+
+Start in **audit mode** first. In audit mode nothing is blocked, and Windows only writes down what it would block.
+
+1. As `FocusAdmin`, open PowerShell as administrator and run:
+
+   ```
+   cd "C:\Program Files\Focus Lock\resources\admin\browser-block"
+   powershell -ExecutionPolicy Bypass -File Enable-BrowserBlock.ps1
+   ```
+
+2. Use the laptop normally for a day: open the work programs, and try opening Firefox or another browser from the list.
+3. Open **Event Viewer > Applications and Services Logs > Microsoft > Windows > CodeIntegrity > Operational**. Event **3076** means "would have blocked". It should only list the browsers. If a work program shows up, don't go on to step 4. Tell Yahya, so the rule that caught it can be removed from `FocusLock-BrowserDeny.xml`.
+4. Turn on blocking:
+
+   ```
+   powershell -ExecutionPolicy Bypass -File Enable-BrowserBlock.ps1 -Enforce
+   ```
+
+   Opening a listed browser now shows "Your organization used App Control for Business to block this app". No restart is needed.
+
+To turn it off, run `Disable-BrowserBlock.ps1` as administrator. Uninstalling Focus Lock also turns it off. To add a browser, follow the note at the top of `FocusLock-BrowserDeny.xml`, then run step 4 again.
+
+This needs Windows 11 version 22H2 or later. To check, open **Settings > System > About**.
+
 ## Day to day
 
 - **Updates:** run a newer `FocusLock-Setup-<version>.exe`. It needs the admin password and keeps all the settings.
@@ -70,6 +115,7 @@ The ID is saved, so later Focus Lock updates keep the policy.
 
 ## What this doesn't cover
 
-- Other browsers. Microsoft Edge is still usable. Uninstalling it isn't supported on Windows 11, so blocking it needs AppLocker or WDAC, which aren't set up here.
+- Microsoft Edge is still usable. It can be added to the browser block later, but Windows uses parts of Edge internally, so test it in audit mode first.
+- A browser that isn't on the list, or a little-known Chrome copy that still calls itself `chrome.exe`, isn't blocked.
 - Anyone with the admin password can undo everything. That's the point of you holding it.
 - Other devices (phone, tablet, a second PC) aren't covered.
