@@ -19,16 +19,26 @@ if (Get-Service -Name FocusLock -ErrorAction SilentlyContinue) {
 }
 if ($KeepSettings) { exit 0 }
 
-# Remove the browser policies the service wrote.
+# Remove the browser policies the service wrote. Only Focus Lock's own values
+# and its URLBlocklist subkey go, so policies set by anything else stay. A
+# browser key is removed only if nothing else is left in it.
+$names = 'BrowserGuestModeEnabled', 'DnsOverHttpsMode', 'ForceGoogleSafeSearch', 'ForceYouTubeRestrict', 'IncognitoModeAvailability', 'TorDisabled', 'InPrivateModeAvailability', 'ForceBingSafeSearch'
 foreach ($key in 'HKLM:\SOFTWARE\Policies\Google\Chrome', 'HKLM:\SOFTWARE\Policies\BraveSoftware\Brave', 'HKLM:\SOFTWARE\Policies\Microsoft\Edge') {
   if (-not (Test-Path $key)) { continue }
   Remove-Item -Path (Join-Path $key 'URLBlocklist') -Recurse -Force -ErrorAction SilentlyContinue
-  foreach ($name in 'BrowserGuestModeEnabled', 'DnsOverHttpsMode', 'ForceGoogleSafeSearch', 'ForceYouTubeRestrict', 'IncognitoModeAvailability', 'TorDisabled', 'InPrivateModeAvailability', 'ForceBingSafeSearch') {
+  foreach ($name in $names) {
     Remove-ItemProperty -Path $key -Name $name -ErrorAction SilentlyContinue
   }
+  $item = Get-Item -Path $key -ErrorAction SilentlyContinue
+  if ($item -and $item.ValueCount -eq 0 -and $item.SubKeyCount -eq 0) {
+    Remove-Item -Path $key -Force -ErrorAction SilentlyContinue
+  }
 }
+
 # Turn off the browser block too, if it was set up.
 $block = Join-Path $here 'browser-block\Disable-BrowserBlock.ps1'
-if (Test-Path (Join-Path $data 'browser-block\policy-id.txt')) { & $block }
+if (Test-Path (Join-Path $data 'browser-block\policy-id.txt')) {
+  try { & $block } catch { Write-Warning $_ }
+}
 
 Remove-Item -Recurse -Force $data -ErrorAction SilentlyContinue
