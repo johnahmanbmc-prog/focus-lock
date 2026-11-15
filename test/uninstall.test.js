@@ -57,3 +57,32 @@ test('uninstall: leaves other policies in the browser keys alone', () => {
   assert.match(guard, /ValueCount -eq 0 -and \$item\.SubKeyCount -eq 0/);
   assert.doesNotMatch(ps1, /Remove-Item[^\n]*SOFTWARE\\Policies(\\[A-Za-z]+)*'?\s*-Recurse/);
 });
+
+test('uninstall: stops and deletes the Focus Lock service', () => {
+  const full = ps1.slice(0, ps1.indexOf('if ($KeepSettings) { exit 0 }'));
+  assert.match(full, /Get-Service -Name FocusLock/);
+  assert.match(full, /& \$svc stop/);
+  assert.match(full, /if \(-not \$KeepSettings\) \{[\s\S]*& \$svc uninstall[\s\S]*sc\.exe delete FocusLock/);
+  // The WinSW wrapper it uses must ship next to the script.
+  const xml = fs.readFileSync(path.join(__dirname, '../app/admin/FocusLockService.xml'), 'utf8');
+  assert.match(xml, /<id>FocusLock<\/id>/);
+});
+
+test('uninstall: turns off the browser block and deletes the settings folder', () => {
+  const after = ps1.slice(ps1.indexOf('if ($KeepSettings) { exit 0 }'));
+  assert.match(after, /browser-block\\Disable-BrowserBlock\.ps1/);
+  assert.match(after, /policy-id\.txt/);
+  assert.ok(fs.existsSync(path.join(__dirname, '../app/admin/browser-block/Disable-BrowserBlock.ps1')));
+  // The browser block is turned off before its id file is deleted with the folder.
+  const block = after.indexOf('& $block');
+  const wipe = after.indexOf('Remove-Item -Recurse -Force $data');
+  assert.ok(block > 0 && wipe > block);
+  assert.match(ps1, /\$data = Join-Path \$env:ProgramData 'FocusLock'/);
+});
+
+test('uninstall: an update keeps the settings and only stops the service', () => {
+  const keep = ps1.indexOf('if ($KeepSettings) { exit 0 }');
+  assert.ok(keep > 0);
+  assert.ok(ps1.indexOf('Remove-Item -Recurse -Force $data') > keep);
+  assert.ok(ps1.indexOf('$names =') > keep, 'policies are kept on update');
+});
