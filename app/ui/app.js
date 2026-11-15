@@ -393,6 +393,10 @@ function renderHistory() {
 
 function render() {
   if (!view) return;
+  // The service holds the settings. If it isn't answering, show that and
+  // keep the last screen as it was.
+  $('offline').hidden = !view.offline;
+  if (view.offline) return;
   renderOverview();
   renderHours(false);
   renderLists();
@@ -401,5 +405,15 @@ function render() {
   renderHistory();
 }
 
-api.onState(v => { view = v; render(); });
-api.getState().then(v => { view = v; render(); });
+// Keep the last real view when the service stops answering, so the
+// screen doesn't empty out.
+function receive(v) {
+  if (v && v.offline && view && !view.offline) {
+    $('offline').hidden = false;
+    return;
+  }
+  view = v;
+  render();
+}
+api.onState(receive);
+api.getState().then(receive);

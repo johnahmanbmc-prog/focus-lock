@@ -1,2 +1,4 @@
 node_modules/
 app/dist/
+app/admin/FocusLockService.exe
+app/dist-extension.zip

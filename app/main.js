@@ -1,12 +1,16 @@
-// Focus Lock desktop app: one window to manage the blocker, a tray icon, and
-// the local server that the Chrome and Brave extension reads settings from.
+// Focus Lock desktop app: the window and tray icon. The settings themselves
+// live in the Focus Lock Windows service (service.js), which this window
+// talks to over 127.0.0.1. During development, with no service installed,
+// the app runs the same engine itself and keeps the settings in its own
+// folder.
 'use strict';
 
 const path = require('node:path');
 const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, shell, dialog } = require('electron');
-const rules = require('./core/rules');
-const { createStore } = require('./core/store');
-const { createServer, PORT } = require('./core/server');
+const { createServer, PORT, CLIENT_HEADER } = require('./core/server');
+const { createEngine } = require('./core/engine');
+
+const BASE = 'http://127.0.0.1:' + PORT;
 
 // For testing: keep the settings in another folder.
 if (process.env.FOCUSLOCK_DATA_DIR) app.setPath('userData', process.env.FOCUSLOCK_DATA_DIR);
@@ -17,33 +21,45 @@ if (!app.requestSingleInstanceLock()) {
   start();
 }
 
+async function call(pathname, body) {
+  const response = await fetch(BASE + pathname, {
+    method: body ? 'POST' : 'GET',
+    headers: body ? { [CLIENT_HEADER]: '1', 'Content-Type': 'application/json' } : { [CLIENT_HEADER]: '1' },
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(4000)
+  });
+  if (!response.ok) throw new Error('Service answered ' + response.status);
+  return response.json();
+}
+
 function start() {
   let win = null;
   let tray = null;
   let quitting = false;
-  let store;
-  let state;
+  let lastView = null;
+  let mode = 'service'; // or 'embedded' during development
   const startHidden = process.argv.includes('--hidden');
 
-  function now() {
-    return Date.now();
+  const offline = () => ({ offline: true, now: Date.now() });
+
+  async function getView() {
+    try {
+      lastView = await call('/v1/view');
+    } catch (error) {
+      lastView = offline();
+    }
+    return lastView;
   }
 
-  // Apply due changes and save, so the file always matches what is in force.
-  function refresh() {
-    const before = JSON.stringify(state);
-    state = rules.settle(state, now());
-    if (JSON.stringify(state) !== before) store.save(state);
-    pushView();
+  async function refresh() {
+    const view = await getView();
+    if (win && !win.isDestroyed()) win.webContents.send('state', view);
     updateTray();
   }
 
-  function pushView() {
-    if (win && !win.isDestroyed()) win.webContents.send('state', rules.view(state, now()));
-  }
-
   function statusLine() {
-    const v = rules.view(state, now());
+    const v = lastView;
+    if (!v || v.offline) return 'Service not running';
     if (v.strict) return 'Strict mode on';
     if (!v.settings.enabled) return 'Blocker off';
     if (!v.settings.schedule.length) return 'No blocking hours set';
@@ -57,7 +73,7 @@ function start() {
       { label: statusLine(), enabled: false },
       { type: 'separator' },
       { label: 'Open Focus Lock', click: showWindow },
-      { label: 'Quit (blocking continues in the browser)', click: () => { quitting = true; app.quit(); } }
+      { label: 'Close this window (blocking continues)', click: () => { quitting = true; app.quit(); } }
     ]));
   }
 
@@ -86,14 +102,12 @@ function start() {
     });
     win.loadFile(path.join(__dirname, 'ui', 'index.html'));
     win.once('ready-to-show', () => { if (!startHidden || tray === null) win.show(); });
-    // Closing the window keeps the app in the tray so settings keep syncing.
     win.on('close', event => {
       if (!quitting) {
         event.preventDefault();
         win.hide();
       }
     });
-    // Links open in the normal browser, never inside the app.
     win.webContents.setWindowOpenHandler(({ url }) => {
       if (/^https:\/\//.test(url)) shell.openExternal(url);
       return { action: 'deny' };
@@ -101,19 +115,17 @@ function start() {
     win.webContents.on('will-navigate', event => event.preventDefault());
   }
 
-  ipcMain.handle('getState', () => rules.view(state, now()));
+  ipcMain.handle('getState', () => getView());
 
-  ipcMain.handle('change', (event, change) => {
+  ipcMain.handle('change', async (event, change) => {
+    let result;
     try {
-      const result = rules.apply(state, change, now());
-      state = result.state;
-      store.save(state);
-      pushView();
-      updateTray();
-      return { ok: true, outcome: result.outcome, message: result.message };
+      result = await call('/v1/change', change);
     } catch (error) {
-      return { ok: false, error: error.message };
+      result = { ok: false, error: 'The Focus Lock service is not running, so nothing was changed.' };
     }
+    refresh();
+    return result;
   });
 
   ipcMain.handle('confirm', async (event, message, detail) => {
@@ -136,43 +148,32 @@ function start() {
     return folder;
   });
 
+  ipcMain.handle('info', () => ({ mode, packaged: app.isPackaged }));
+
   app.on('second-instance', showWindow);
-
   app.on('before-quit', () => { quitting = true; });
-
-  // Keep running in the tray when the window is closed.
   app.on('window-all-closed', () => {});
 
   app.whenReady().then(async () => {
-    store = createStore(path.join(app.getPath('userData'), 'state.json'));
-    state = store.load();
+    if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: true, args: ['--hidden'] });
 
-    if (app.isPackaged) {
-      app.setLoginItemSettings({ openAtLogin: true, args: ['--hidden'] });
-    }
-
-    const server = createServer({
-      getPayload: () => rules.extensionPayload(state, now()),
-      onSeen: (browser, info) => {
-        const first = !state.browsers[browser];
-        state.browsers[browser] = { lastSeen: now(), version: info.version };
-        // Save the first contact right away; later ones only matter in memory.
-        if (first) store.save(state);
-        pushView();
+    // In development there is no service, so run the engine here.
+    const reachable = await call('/v1/view').then(() => true, () => false);
+    if (!reachable && !app.isPackaged) {
+      mode = 'embedded';
+      const engine = createEngine(path.join(app.getPath('userData'), 'state.json'));
+      try {
+        await createServer({ engine }).listen();
+        setInterval(() => engine.settle(), 20 * 1000);
+        engine.settle();
+      } catch (error) {
+        dialog.showErrorBox('Focus Lock', 'Could not start on port ' + PORT + ': ' + error.message);
       }
-    });
-    try {
-      await server.listen();
-    } catch (error) {
-      dialog.showErrorBox('Focus Lock',
-        'Could not start the connection to the browser extension on port ' + PORT + '. ' +
-        'Is Focus Lock already running? (' + error.message + ')');
     }
 
     try {
       tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'assets', 'tray.png')));
       tray.on('click', showWindow);
-      updateTray();
     } catch (error) {
       tray = null;
     }
@@ -180,8 +181,7 @@ function start() {
     createWindow();
     if (startHidden && tray) win.hide();
 
-    // Due changes and the end of strict mode are applied every 20 seconds.
-    setInterval(refresh, 20 * 1000);
+    setInterval(refresh, 5 * 1000);
     refresh();
   });
 }

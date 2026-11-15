@@ -6,7 +6,8 @@ const path = require('node:path');
 
 const r = require('../app/core/rules.js');
 const m = require('../extension/lib/match.js');
-const { createServer } = require('../app/core/server.js');
+const { createServer, CLIENT_HEADER } = require('../app/core/server.js');
+const { createEngine } = require('../app/core/engine.js');
 const { createStore } = require('../app/core/store.js');
 
 const HOUR = 3600 * 1000;
@@ -199,17 +200,37 @@ test('the payload for the extension makes a config the extension can use', () =>
   assert.equal(m.siteBlockReason('https://pornhub.com/', outside), 'genre: adult');
 });
 
-test('the local server answers GET only, on the right host, and records the browser', async () => {
-  const seen = [];
-  const srv = createServer({ getPayload: () => ({ hello: 1 }), onSeen: b => seen.push(b), port: 0 });
+test('the local server serves the extension and the app, and refuses web pages', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'focuslock-'));
+  const engine = createEngine(path.join(dir, 'state.json'), { now: () => NOW });
+  const srv = createServer({ engine, port: 0 });
   const port = await srv.listen();
+  const base = `http://127.0.0.1:${port}`;
+  const app = { [CLIENT_HEADER]: '1' };
   try {
-    const ok = await fetch(`http://127.0.0.1:${port}/v1/state?browser=Brave&version=0.3.0`);
-    assert.equal(ok.status, 200);
-    assert.deepEqual(await ok.json(), { hello: 1 });
-    assert.equal(ok.headers.get('access-control-allow-origin'), null);
-    assert.deepEqual(seen, ['Brave']);
-    assert.equal((await fetch(`http://127.0.0.1:${port}/v1/state`, { method: 'POST', body: '{}' })).status, 404);
+    const ext = await fetch(`${base}/v1/state?browser=Brave&version=0.3.0`);
+    assert.equal(ext.status, 200);
+    assert.deepEqual((await ext.json()).settings.schedule, []);
+    assert.equal(ext.headers.get('access-control-allow-origin'), null);
+    assert.ok(engine.view().browsers.Brave);
+
+    // The app window can read the view and make changes.
+    assert.equal((await fetch(`${base}/v1/view`, { headers: app })).status, 200);
+    const post = body => fetch(`${base}/v1/change`, {
+      method: 'POST', headers: { ...app, 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    }).then(r => r.json());
+    assert.deepEqual((await post({ type: 'schedule', schedule: WEEKDAYS })).ok, true);
+    assert.equal((await post({ type: 'enabled', enabled: false })).outcome, 'queued');
+    assert.match((await post({ type: 'nonsense' })).error, /Unknown/);
+    // Saved to disk, and a new engine reading the same file sees it.
+    assert.deepEqual(createEngine(engine.file).view().settings.schedule, WEEKDAYS);
+
+    // Requests without the app header, or from a web page (Origin set), are refused.
+    assert.equal((await fetch(`${base}/v1/view`)).status, 403);
+    assert.equal((await fetch(`${base}/v1/change`, { method: 'POST', body: '{}', headers: { 'Content-Type': 'text/plain' } })).status, 403);
+    assert.equal((await fetch(`${base}/v1/change`, {
+      method: 'POST', headers: { ...app, 'Content-Type': 'application/json', Origin: 'https://evil.example' }, body: '{}'
+    })).status, 403);
     const rebound = await new Promise((resolve, reject) => {
       require('node:http').get({ host: '127.0.0.1', port, path: '/v1/state', headers: { Host: 'evil.example' } },
         res => { res.resume(); resolve(res.statusCode); }).on('error', reject);

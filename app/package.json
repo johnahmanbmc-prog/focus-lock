@@ -1,14 +1,14 @@
 {
   "name": "focus-lock-desktop",
   "productName": "Focus Lock",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Desktop app to manage the Focus Lock blocker",
   "main": "main.js",
   "private": true,
   "author": "Focus Lock",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win nsis portable --publish never"
+    "dist": "electron-builder --win nsis --publish never"
   },
   "devDependencies": {
     "electron": "33.2.1",
@@ -18,10 +18,38 @@
     "appId": "com.focuslock.desktop",
     "publish": null,
     "productName": "Focus Lock",
-    "files": ["main.js", "preload.js", "core/**", "ui/**", "assets/**"],
-    "extraResources": [{ "from": "../extension", "to": "extension" }],
-    "win": { "icon": "assets/icon.ico", "target": ["nsis", "portable"] },
-    "nsis": { "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true },
-    "portable": { "artifactName": "FocusLock-portable-${version}.exe" }
+    "files": [
+      "main.js",
+      "preload.js",
+      "service.js",
+      "core/**",
+      "ui/**",
+      "assets/**"
+    ],
+    "extraResources": [
+      {
+        "from": "../extension",
+        "to": "extension"
+      },
+      {
+        "from": "admin",
+        "to": "admin"
+      }
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": false,
+      "include": "build/installer.nsh",
+      "artifactName": "FocusLock-Setup-${version}.exe"
+    },
+    "asar": false
   }
 }

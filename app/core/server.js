@@ -1,37 +1,77 @@
-// A small HTTP server on 127.0.0.1 that the Chrome and Brave extension
-// polls for the current settings. It only answers GET requests and never
-// accepts changes, so nothing outside the app window can change a setting.
+// A small HTTP server on 127.0.0.1. The browser extension reads the current
+// settings from it, and the app window reads the full view and asks for
+// changes. Every change goes through the rules engine, so nothing that
+// talks to this server can do more than the app window can.
 'use strict';
 
 const http = require('node:http');
 
 const PORT = 47821;
 const KNOWN_BROWSERS = ['Chrome', 'Brave'];
+const MAX_BODY = 64 * 1024;
 
-// getPayload() returns what to send; onSeen(browser) records which browser
-// asked, so the app can show that Chrome and Brave are connected.
-function createServer({ getPayload, onSeen, port = PORT, host = '127.0.0.1' }) {
-  const server = http.createServer((req, res) => {
+// Header the app sends with every change. Web pages can't add custom headers
+// to a request to another origin without a CORS preflight, which this server
+// never approves, so a web page can't send changes.
+const CLIENT_HEADER = 'x-focus-lock-client';
+
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    req.on('data', chunk => {
+      size += chunk.length;
+      if (size > MAX_BODY) {
+        reject(new Error('too large'));
+        req.destroy();
+      } else {
+        chunks.push(chunk);
+      }
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
+// engine: { payload(), view(), change(change), seen(browser, info) }
+function createServer({ engine, port = PORT, host = '127.0.0.1' }) {
+  const server = http.createServer(async (req, res) => {
+    const send = (status, body) => {
+      res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(body === undefined ? '' : JSON.stringify(body));
+    };
+
     // Refuse requests that arrive under another host name (DNS rebinding).
     const actual = server.address().port;
     const hostHeader = String(req.headers.host || '').toLowerCase();
-    if (hostHeader !== '127.0.0.1:' + actual && hostHeader !== 'localhost:' + actual) {
-      res.writeHead(421).end();
-      return;
-    }
+    if (hostHeader !== '127.0.0.1:' + actual && hostHeader !== 'localhost:' + actual) return send(421);
+
     const url = new URL(req.url, 'http://127.0.0.1');
-    if (req.method !== 'GET' || url.pathname !== '/v1/state') {
-      res.writeHead(404).end();
-      return;
+
+    if (req.method === 'GET' && url.pathname === '/v1/state') {
+      const browser = url.searchParams.get('browser');
+      if (KNOWN_BROWSERS.includes(browser)) {
+        engine.seen(browser, { version: String(url.searchParams.get('version') || '').slice(0, 20) });
+      }
+      return send(200, engine.payload());
     }
-    const browser = url.searchParams.get('browser');
-    if (KNOWN_BROWSERS.includes(browser)) {
-      onSeen(browser, { version: String(url.searchParams.get('version') || '').slice(0, 20) });
+
+    const fromApp = req.headers[CLIENT_HEADER] === '1' && !req.headers.origin;
+    if (req.method === 'GET' && url.pathname === '/v1/view') {
+      if (!fromApp) return send(403);
+      return send(200, engine.view());
     }
-    const body = JSON.stringify(getPayload());
-    // No CORS headers: web pages cannot read this, only the extension can.
-    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    res.end(body);
+    if (req.method === 'POST' && url.pathname === '/v1/change') {
+      if (!fromApp || !/^application\/json/.test(String(req.headers['content-type'] || ''))) return send(403);
+      let change;
+      try {
+        change = JSON.parse(await readBody(req));
+      } catch (e) {
+        return send(400, { ok: false, error: 'Bad request.' });
+      }
+      return send(200, engine.change(change));
+    }
+    return send(404);
   });
 
   return {
@@ -48,4 +88,4 @@ function createServer({ getPayload, onSeen, port = PORT, host = '127.0.0.1' }) {
   };
 }
 
-module.exports = { createServer, PORT };
+module.exports = { createServer, PORT, CLIENT_HEADER };

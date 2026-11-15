@@ -22,6 +22,11 @@
 
     <main>
       <div id="toast" role="status" hidden></div>
+      <div id="offline" class="offline" role="alert" hidden>
+        <b>The Focus Lock service isn't running.</b> Your browsers keep blocking with the last settings they got, but you can't
+        change anything until the service is back. It starts with Windows; if this stays, ask the person with the admin password to
+        restart the "Focus Lock" service.
+      </div>
 
       <!-- Overview -->
       <section class="page" id="page-overview">
@@ -164,7 +169,7 @@
           <ol class="steps">
             <li>In Chrome open <code>chrome://extensions</code>, or in Brave open <code>brave://extensions</code>.</li>
             <li>Turn on <b>Developer mode</b> (top right).</li>
-            <li>Click <b>Load unpacked</b> and pick the extension folder. <button class="link" id="openExtension">Open the extension folder</button></li>
+            <li>Click <b>Load unpacked</b> and pick the extension folder. <button class="link" id="openExtension">Open the extension folder</button> Once the helper has set up the browser policy (see the setup guide), the browsers install it themselves and you can skip these steps.</li>
             <li>Come back here. The browser shows as connected within a minute.</li>
           </ol>
           <p class="muted small">Once connected, the extension's own settings page becomes read-only and says it is managed by this app.</p>

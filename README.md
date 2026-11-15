@@ -10,13 +10,24 @@ One window on your PC to manage the whole blocker: blocking days and hours, stri
 
 ### Install
 
-1. Open the repository's **Actions** tab, pick the latest **test** run, and download **FocusLock-windows** under Artifacts.
-2. Run `Focus Lock Setup <version>.exe`, or use `FocusLock-portable-<version>.exe` without installing.
-3. In the app, open **Browsers** and follow the steps to load the extension in Chrome and Brave. The installer puts the extension folder next to the app, and **Open the extension folder** takes you there.
+Setup is done by the person who holds the admin password. Follow **[docs/HELPER-SETUP.md](docs/HELPER-SETUP.md)**. In short:
 
-The installed app starts with Windows and sits in the tray. Closing the window keeps it running; the tray menu has **Quit**.
+1. Download **FocusLock-windows** from the latest **test** run in the Actions tab. It has `FocusLock-Setup-<version>.exe` and `dist-extension.zip`.
+2. Run the setup as administrator. It installs the app for all users in `C:\Program Files\Focus Lock`, creates `C:\ProgramData\FocusLock` (standard users can read but not change or delete it), and installs the **Focus Lock** Windows service.
+3. Publish `dist-extension.zip` to the Chrome Web Store as unlisted, then run `install.ps1 -ExtensionId <id>`. Chrome and Brave then install the extension themselves, and it can't be removed or turned off.
 
-To run it from source instead: `cd app`, `npm install`, `npm start`.
+To run it from source during development: `cd app`, `npm install`, `npm start`. With no service running, the app runs the engine itself and keeps the settings in its own folder.
+
+### How it fits together
+
+| Part | Runs as | What it does |
+| --- | --- | --- |
+| Focus Lock service (`app/service.js`, run by WinSW) | SYSTEM | Owns the settings in `C:\ProgramData\FocusLock\state.json`, applies the rules, and serves `127.0.0.1:47821` |
+| Focus Lock app (`app/main.js`) | Yahya | The window and tray icon. Reads the settings from the service and sends changes to it |
+| Extension | The browser | Reads the settings from the service every minute and blocks |
+| `app/admin/install.ps1` | Administrator | Folder permissions, the service, and the Chrome and Brave policies |
+
+The service only accepts changes that the rules allow, so sending it requests directly can't do more than the app window can. Web pages can't send it changes at all.
 
 ### Rules
 
@@ -31,11 +42,9 @@ There are no blocking hours by default. Strict mode needs hours set and the bloc
 
 ### How the app talks to the extension
 
-The app runs a small server on `http://127.0.0.1:47821/v1/state` that only answers reads from this PC. The extension asks it for the settings every minute and when its settings page opens. If the app isn't running, the extension keeps the last settings it got.
+The service answers `GET http://127.0.0.1:47821/v1/state` for the extension. The extension asks for the settings every minute and when its settings page opens. If the service isn't running, the extension keeps the last settings it got. The app window uses `/v1/view` and `/v1/change`, which need a header that web pages can't send.
 
 Once the extension has heard from the app, its own settings page becomes read-only. While strict mode is on, the extension also checks every update and ignores one that is less strict than what it has (for example, the blocker off, fewer hours, a list off, or an early unlock without the 72 hour wait), so a fake server or an edited settings file can't switch blocking off.
-
-The app keeps its settings in `%APPDATA%\Focus Lock\state.json`.
 
 ## Browser extension (`extension/`)
 
@@ -90,7 +99,7 @@ A browser policy can supply the whole config as a JSON string under the extensio
 
 ### Limits
 
-Strict mode locks the settings inside the app and the extension. It does not stop someone from removing the extension in the browser, uninstalling the app, or changing the PC's clock (a standard Windows account can't change the clock).
+Once the helper setup is done, a standard Windows account can't uninstall the app, stop the service, change or delete the settings, change the clock, or remove the extension from Chrome or Brave. Anyone with the admin password can. Microsoft Edge and other browsers aren't covered.
 
 ## Tests
 
