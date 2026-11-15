@@ -19,24 +19,41 @@ Full page loads are blocked by `declarativeNetRequest` rules. The content script
 
 1. Open `chrome://extensions` (or `brave://extensions`) and turn on **Developer mode**.
 2. Click **Load unpacked** and pick the `extension` folder.
-3. Visit `netflix.com`, `youtube.com/shorts/...`, or search for `watch free` and you'll see the blocked page.
+3. Click the Focus Lock icon in the toolbar to open the settings page.
+
+### Settings page
+
+Click the toolbar icon (or **Details > Extension options**) to open it.
+
+- **Blocker on.** The main switch.
+- **Blocking hours.** Add time windows with days and a start and end time. There are no hours by default, so YouTube, social media and streaming sites stay open until you add some. A window that ends before it starts runs past midnight. Set the same start and end to block the whole day.
+- **Strict mode.** Pick an end date and time and press **Start strict mode**. Until then you can't change the hours or turn the blocker off. You can extend it, but not shorten it. You need hours set and the blocker on to start it.
+- **Early unlock.** While strict mode is on you can request an early unlock. Strict mode ends 72 hours after the request unless you cancel it. Your hours and lists stay as they are, and **Re-arm strict mode** starts it again for the same length.
+
+### What gets blocked
+
+| List | When |
+| --- | --- |
+| YouTube (all of it), social media, Netflix, Crunchyroll and other streaming sites | During your blocking hours |
+| Adult sites and keywords, pirate streaming keywords | All the time, while the blocker is on |
+| Google SafeSearch (adds `safe=active` to every search) | All the time, while the blocker is on |
 
 ### Configuration
 
-The defaults are in `extension/default-config.json`:
+The lists are in `extension/default-config.json`:
 
-- `schedule`: `null` means always on. Otherwise it's a list of windows like `{ "days": [1,2,3,4,5], "start": "09:00", "end": "23:00" }` (Sunday = 0). A window whose end is before its start runs past midnight.
 - `websites`, `urls`: lists of domains and URL prefixes.
 - `keywords.url`, `keywords.title`, `keywords.text`: phrases to match. Keep `text` phrases specific to avoid false positives.
-- `genres.blocked` plus `genres.sites`: which genres are on, and the sites in each.
-- `youtube.mode`: `"genres"` (block the listed `blockedGenres`), `"full"` (block YouTube entirely), or `"off"`. `blockShorts` blocks `/shorts`.
+- `genres.blocked` plus `genres.sites`: which genres are on, and the sites in each (`social-media`, `video-streaming`, `adult` and others).
+- `alwaysOn.genres`, `alwaysOn.keywords`: lists that apply outside the blocking hours too.
+- `youtube.mode`: `"full"` (block YouTube entirely), `"genres"` (block the listed `blockedGenres`), or `"off"`. `blockShorts` blocks `/shorts`.
+- `forceSafeSearch`: turns on Google SafeSearch.
 
-A browser policy can supply the whole config as a JSON string under the extension's managed `config` key, and that replaces the defaults. The schema is in `extension/managed-schema.json`.
+A browser policy can supply the whole config as a JSON string under the extension's managed `config` key, and that replaces the defaults. The schema is in `extension/managed-schema.json`. The hours and strict mode are set on the settings page, not in this file.
 
-### Open decisions
+### Limits
 
-- Blocking hours (`schedule`) are still `null`, which means always on.
-- YouTube is set to `genres` mode. Switch it to `full` for a complete block.
+Strict mode locks the settings inside the extension. It does not stop someone from removing the extension in the browser.
 
 ## Tests
 

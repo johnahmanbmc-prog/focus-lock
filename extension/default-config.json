@@ -1,5 +1,4 @@
 {
-  "schedule": null,
   "websites": [
     "netflix.com",
     "primevideo.com",
@@ -8,8 +7,7 @@
     "max.com",
     "tv.apple.com",
     "crunchyroll.com",
-    "twitch.tv",
-    "tiktok.com"
+    "twitch.tv"
   ],
   "urls": [
     "amazon.com/gp/video",
@@ -18,21 +16,116 @@
     "reddit.com/r/piracy"
   ],
   "keywords": {
-    "url": ["123movies", "fmovies", "soap2day", "putlocker", "gomovies", "watch free", "free movies online", "watch series free"],
-    "title": ["watch free", "123movies", "full movie free", "free movies online", "watch online free"],
-    "text": ["watch full movie free", "stream free in hd", "watch series online free"]
+    "url": [
+      "123movies",
+      "fmovies",
+      "soap2day",
+      "putlocker",
+      "gomovies",
+      "watch free",
+      "free movies online",
+      "watch series free"
+    ],
+    "title": [
+      "watch free",
+      "123movies",
+      "full movie free",
+      "free movies online",
+      "watch online free"
+    ],
+    "text": [
+      "watch full movie free",
+      "stream free in hd",
+      "watch series online free"
+    ]
   },
   "genres": {
-    "blocked": ["video-streaming", "anime-streaming", "sports-streaming"],
+    "blocked": [
+      "video-streaming",
+      "anime-streaming",
+      "sports-streaming",
+      "social-media"
+    ],
     "sites": {
-      "video-streaming": ["peacocktv.com", "paramountplus.com", "nowtv.com", "plex.tv", "pluto.tv", "tubitv.com"],
-      "anime-streaming": ["funimation.com", "hidive.com"],
-      "sports-streaming": ["dazn.com", "espn.com"]
+      "video-streaming": [
+        "peacocktv.com",
+        "paramountplus.com",
+        "nowtv.com",
+        "plex.tv",
+        "pluto.tv",
+        "tubitv.com"
+      ],
+      "anime-streaming": [
+        "funimation.com",
+        "hidive.com"
+      ],
+      "sports-streaming": [
+        "dazn.com",
+        "espn.com"
+      ],
+      "social-media": [
+        "facebook.com",
+        "instagram.com",
+        "tiktok.com",
+        "x.com",
+        "twitter.com",
+        "reddit.com",
+        "snapchat.com",
+        "threads.net",
+        "tumblr.com",
+        "pinterest.com",
+        "9gag.com"
+      ],
+      "adult": [
+        "pornhub.com",
+        "xvideos.com",
+        "xnxx.com",
+        "xhamster.com",
+        "redtube.com",
+        "youporn.com",
+        "spankbang.com",
+        "eporner.com",
+        "onlyfans.com",
+        "chaturbate.com",
+        "stripchat.com",
+        "cam4.com",
+        "rule34.xxx",
+        "e-hentai.org",
+        "nhentai.net"
+      ]
     }
   },
   "youtube": {
-    "mode": "genres",
+    "mode": "full",
     "blockShorts": true,
-    "blockedGenres": ["Entertainment", "Gaming", "Comedy", "Film & Animation", "People & Blogs", "Sports"]
-  }
+    "blockedGenres": [
+      "Entertainment",
+      "Gaming",
+      "Comedy",
+      "Film & Animation",
+      "People & Blogs",
+      "Sports"
+    ]
+  },
+  "alwaysOn": {
+    "genres": [
+      "adult"
+    ],
+    "keywords": [
+      "porn",
+      "xxx",
+      "nsfw",
+      "hentai",
+      "onlyfans",
+      "123movies",
+      "fmovies",
+      "soap2day",
+      "putlocker",
+      "gomovies",
+      "watch free",
+      "free movies online",
+      "watch series free"
+    ]
+  },
+  "forceSafeSearch": true
 }

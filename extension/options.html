@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Focus Lock settings</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #f6f5f2; --card: #fff; --fg: #1d1d1b; --muted: #6b6a66; --line: #dddbd5;
+            --accent: #2f5d50; --danger: #9b2c2c; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #1b1b1a; --card: #252523; --fg: #ecebe7; --muted: #a3a29d; --line: #3a3a37; --accent: #7fbfa9; --danger: #e08585; }
+    }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
+    main { max-width: 44rem; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { font-size: 1.5rem; margin: 0 0 4px; }
+    h2 { font-size: 1.1rem; margin: 0 0 8px; }
+    section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-top: 16px; }
+    p { margin: 4px 0; }
+    .muted { color: var(--muted); }
+    .window { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+    .window:first-of-type { border-top: 0; }
+    .days { display: flex; flex-wrap: wrap; gap: 4px; }
+    .days label { display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px; border: 1px solid var(--line); border-radius: 6px; }
+    input[type=time], input[type=datetime-local] { font: inherit; padding: 4px; }
+    button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--fg); cursor: pointer; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+    button.danger { color: var(--danger); }
+    button:disabled, input:disabled { opacity: .5; cursor: not-allowed; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+    #status { font-weight: 600; }
+    #message { min-height: 1.5em; margin-top: 8px; }
+    #message.error { color: var(--danger); }
+    .locked { border-color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Focus Lock</h1>
+    <p id="status" class="muted">Loading…</p>
+
+    <section id="power">
+      <h2>Blocker</h2>
+      <label><input type="checkbox" id="enabled"> Blocker on</label>
+      <p class="muted">When the blocker is on, sites are blocked during the hours below.</p>
+    </section>
+
+    <section id="hours">
+      <h2>Blocking hours</h2>
+      <p class="muted">Add a time window for each block of the week. A window that ends before it starts runs past midnight.
+        Set the same start and end time to block the whole day.</p>
+      <div id="windows"></div>
+      <div class="row">
+        <button id="add">Add time window</button>
+        <button id="save" class="primary">Save hours</button>
+      </div>
+    </section>
+
+    <section id="strict">
+      <h2>Strict mode</h2>
+      <p class="muted">While strict mode is on, you can't change the blocking hours or turn the blocker off until the end time.
+        You can still extend it.</p>
+      <div class="row">
+        <label for="until">Lock until</label>
+        <input type="datetime-local" id="until">
+        <button id="startStrict" class="primary">Start strict mode</button>
+      </div>
+    </section>
+
+    <section id="unlock">
+      <h2>Early unlock</h2>
+      <p class="muted">An emergency way out. Ask for an early unlock and strict mode ends 72 hours later. Your hours and lists stay
+        as they are. You can cancel the request at any time.</p>
+      <p id="unlockStatus"></p>
+      <div class="row">
+        <button id="requestUnlock">Request early unlock</button>
+        <button id="cancelUnlock">Cancel request</button>
+        <button id="rearm" class="primary">Re-arm strict mode</button>
+      </div>
+    </section>
+
+    <p id="message" role="status"></p>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>
