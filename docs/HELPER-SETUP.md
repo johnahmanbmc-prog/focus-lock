@@ -30,8 +30,8 @@ From now on, when something needs admin rights, Windows asks for the `FocusAdmin
 
 ## 3. Install Focus Lock
 
-1. Download **FocusLock-windows** from the latest successful run of the **test** workflow in the repo's Actions tab, and unzip it.
-2. Run `FocusLock-Setup-<version>.exe`. When Windows asks, enter the `FocusAdmin` password.
+1. Download the installer: [FocusLock-Setup.exe](https://github.com/johnahmanbmc-prog/focus-lock/releases/latest/download/FocusLock-Setup.exe). It's also on the repo's **Releases** page. Sign in to GitHub first, because the repo is private.
+2. Run `FocusLock-Setup.exe`. When Windows asks, enter the `FocusAdmin` password.
 3. The installer:
    - puts the app in `C:\Program Files\Focus Lock`
    - creates `C:\ProgramData\FocusLock`, where only admins can change files
@@ -87,7 +87,7 @@ This needs Windows 11 version 22H2 or later. To check, open **Settings > System 
 
 ## Day to day
 
-- **Updates:** run a newer `FocusLock-Setup-<version>.exe`. It needs the admin password and keeps all the settings.
+- **Updates:** download the latest `FocusLock-Setup.exe` again and run it. It needs the admin password and keeps all the settings.
 - **The app says "The Focus Lock service isn't running":** sign in as `FocusAdmin`, open `services.msc`, and start **Focus Lock**. The browsers keep the last block list until then. Logs are in `C:\ProgramData\FocusLock\logs`.
 - **Uninstall:** go to **Settings > Apps > Installed apps > Focus Lock > Uninstall**, with the admin password. This removes the service, the browser policies, the browser block and the settings.
 

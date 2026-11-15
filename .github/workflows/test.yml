@@ -22,6 +22,8 @@ jobs:
   windows-app:
     runs-on: windows-latest
     needs: test
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -44,3 +46,22 @@ jobs:
           name: FocusLock-windows
           path: app/dist/*.exe
           if-no-files-found: error
+      # On main, publish the installer as a GitHub Release so it has a
+      # stable download link:
+      # https://github.com/<owner>/<repo>/releases/latest/download/FocusLock-Setup.exe
+      - name: Publish release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = (Get-Content app/package.json -Raw | ConvertFrom-Json).version
+          $exe = Get-ChildItem app/dist/FocusLock-Setup-*.exe | Select-Object -First 1
+          Copy-Item $exe.FullName app/dist/FocusLock-Setup.exe
+          gh release view "v$v" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "v$v" $exe.FullName app/dist/FocusLock-Setup.exe --clobber
+          } else {
+            gh release create "v$v" $exe.FullName app/dist/FocusLock-Setup.exe --target $env:GITHUB_SHA --title "Focus Lock $v" --notes "Windows installer. Setup is done by the person with the admin password: see docs/HELPER-SETUP.md."
+          }
+          if ($LASTEXITCODE -ne 0) { exit 1 }

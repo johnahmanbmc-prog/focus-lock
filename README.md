@@ -30,7 +30,7 @@ Strict mode needs hours set and the blocker on, and lasts up to 365 days. Starti
 The person who holds the admin password does the setup, following **[docs/HELPER-SETUP.md](docs/HELPER-SETUP.md)**. In short:
 
 1. Make an admin account for the helper, and make Yahya's account a standard user.
-2. Download **FocusLock-windows** from the latest **test** run in the Actions tab, and run `FocusLock-Setup-<version>.exe`.
+2. Download [FocusLock-Setup.exe](https://github.com/johnahmanbmc-prog/focus-lock/releases/latest/download/FocusLock-Setup.exe) from the latest release and run it.
 3. Run `admin/browser-block/Enable-BrowserBlock.ps1` in audit mode for a day, then run it again with `-Enforce`.
 
 To run the app from source during development: `cd app`, `npm install`, `npm start`. Without the service, the app runs the engine itself, keeps the settings in its own folder, and doesn't change the browsers.
@@ -60,4 +60,4 @@ Every 20 seconds the service applies due changes, ends strict mode on time, and 
 npm test
 ```
 
-GitHub Actions runs the same tests on every push, and builds the Windows installer.
+GitHub Actions runs the same tests on every push and builds the Windows installer. On `main`, it also publishes the installer as a GitHub Release.
