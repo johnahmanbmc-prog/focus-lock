@@ -1,7 +1,7 @@
 {
   "name": "focus-lock-desktop",
   "productName": "Focus Lock",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Desktop app to manage the Focus Lock blocker",
   "main": "main.js",
   "private": true,

@@ -89,7 +89,7 @@ This needs Windows 11 version 22H2 or later. To check, open **Settings > System 
 
 - **Updates:** download the latest `FocusLock-Setup.exe` again and run it. It needs the admin password and keeps all the settings.
 - **The app says "The Focus Lock service isn't running":** sign in as `FocusAdmin`, open `services.msc`, and start **Focus Lock**. The browsers keep the last block list until then. Logs are in `C:\ProgramData\FocusLock\logs`.
-- **Uninstall:** go to **Settings > Apps > Installed apps > Focus Lock > Uninstall**, with the admin password. This removes the service, the browser policies, the browser block and the settings.
+- **Uninstall:** go to **Settings > Apps > Installed apps > Focus Lock > Uninstall**, with the admin password. This removes the service, the browser block, the settings and every browser policy Focus Lock set. Policies set by anything else stay.
 
 ## What this doesn't cover
 
