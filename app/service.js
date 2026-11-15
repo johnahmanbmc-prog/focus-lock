@@ -1,7 +1,8 @@
 // The Focus Lock Windows service. Runs as SYSTEM (installed by the setup
-// program through WinSW), keeps the settings in C:\ProgramData\FocusLock,
-// where standard users can read but not change or delete files, and serves
-// them on 127.0.0.1:47821 to the app window and the browser extension.
+// program through WinSW). It keeps the settings in C:\ProgramData\FocusLock,
+// where standard users can read but not change or delete files, writes the
+// Chrome, Brave and Edge block-list policies, and serves the settings on
+// 127.0.0.1:47821 to the app window.
 //
 // It is started as: "Focus Lock.exe" service.js, with ELECTRON_RUN_AS_NODE=1.
 'use strict';
@@ -9,9 +10,12 @@
 const path = require('node:path');
 const { createEngine } = require('./core/engine');
 const { createServer } = require('./core/server');
+const { createPolicyWriter } = require('./core/winpolicy');
 
 const dir = process.env.FOCUSLOCK_STATE_DIR || path.join(process.env.ProgramData || 'C:\\ProgramData', 'FocusLock');
-const engine = createEngine(path.join(dir, 'state.json'));
+// FOCUSLOCK_NO_POLICY=1 runs without touching the registry (for testing).
+const policy = process.env.FOCUSLOCK_NO_POLICY ? null : createPolicyWriter({ dir });
+const engine = createEngine(path.join(dir, 'state.json'), { policy });
 const server = createServer({ engine });
 
 server.listen().then(
@@ -22,6 +26,7 @@ server.listen().then(
   }
 );
 
-// Apply due changes and the end of strict mode every 20 seconds.
-setInterval(() => engine.settle(), 20 * 1000);
-engine.settle();
+// Every 20 seconds: apply due changes, end strict mode on time, and switch
+// the block list when the blocking hours start or end.
+setInterval(() => engine.tick(), 20 * 1000);
+engine.tick();

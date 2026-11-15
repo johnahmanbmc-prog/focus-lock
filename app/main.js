@@ -140,14 +140,6 @@ function start() {
     return response === 1;
   });
 
-  ipcMain.handle('openExtensionFolder', () => {
-    const folder = app.isPackaged
-      ? path.join(process.resourcesPath, 'extension')
-      : path.join(__dirname, '..', 'extension');
-    shell.openPath(folder);
-    return folder;
-  });
-
   ipcMain.handle('info', () => ({ mode, packaged: app.isPackaged }));
 
   app.on('second-instance', showWindow);
@@ -164,8 +156,8 @@ function start() {
       const engine = createEngine(path.join(app.getPath('userData'), 'state.json'));
       try {
         await createServer({ engine }).listen();
-        setInterval(() => engine.settle(), 20 * 1000);
-        engine.settle();
+        setInterval(() => engine.tick(), 20 * 1000);
+        engine.tick();
       } catch (error) {
         dialog.showErrorBox('Focus Lock', 'Could not start on port ' + PORT + ': ' + error.message);
       }

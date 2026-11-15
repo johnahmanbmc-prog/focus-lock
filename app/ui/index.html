@@ -23,7 +23,7 @@
     <main>
       <div id="toast" role="status" hidden></div>
       <div id="offline" class="offline" role="alert" hidden>
-        <b>The Focus Lock service isn't running.</b> Your browsers keep blocking with the last settings they got, but you can't
+        <b>The Focus Lock service isn't running.</b> Your browsers keep the last block list it wrote, but you can't
         change anything until the service is back. It starts with Windows; if this stays, ask the person with the admin password to
         restart the "Focus Lock" service.
       </div>
@@ -90,7 +90,7 @@
       <section class="page" id="page-lists" hidden>
         <header class="page-head">
           <h1>Block lists</h1>
-          <p class="muted">Turning a list on, or adding a site, happens right away. Turning a list off or removing a site waits 24 hours, and is not possible during strict mode.</p>
+          <p class="muted">Turning a list on, or adding a site, happens right away in Chrome, Brave and Edge. Turning a list off or removing a site waits 24 hours, and is not possible during strict mode.</p>
         </header>
         <div class="card">
           <h2>During blocking hours</h2>
@@ -109,15 +109,6 @@
             <button class="primary" type="submit">Block site</button>
           </form>
           <ul class="items" id="siteList"></ul>
-        </div>
-        <div class="card">
-          <h2>Your keywords</h2>
-          <p class="muted small">Blocks pages whose address, search or title contains the phrase, during blocking hours.</p>
-          <form class="row" id="keywordForm">
-            <input id="keywordInput" placeholder="for example: full episode" autocomplete="off" aria-label="Keyword to block">
-            <button class="primary" type="submit">Block keyword</button>
-          </form>
-          <ul class="items" id="keywordList"></ul>
         </div>
       </section>
 
@@ -161,18 +152,23 @@
       <section class="page" id="page-browsers" hidden>
         <header class="page-head">
           <h1>Browsers</h1>
-          <p class="muted">Chrome and Brave read their settings from this app every minute. If the app is closed, they keep the last settings they got.</p>
+          <p class="muted">Chrome, Brave and Edge block sites themselves, through browser policy that the Focus Lock service writes.
+            When your blocking hours start or end, the service updates the list within about 20 seconds. Other browsers are blocked by the helper's setup.</p>
         </header>
         <div class="grid" id="browserCards"></div>
         <div class="card">
-          <h2>Set up the extension</h2>
-          <ol class="steps">
-            <li>In Chrome open <code>chrome://extensions</code>, or in Brave open <code>brave://extensions</code>.</li>
-            <li>Turn on <b>Developer mode</b> (top right).</li>
-            <li>Click <b>Load unpacked</b> and pick the extension folder. <button class="link" id="openExtension">Open the extension folder</button> Once the helper has set up the browser policy (see the setup guide), the browsers install it themselves and you can skip these steps.</li>
-            <li>Come back here. The browser shows as connected within a minute.</li>
-          </ol>
-          <p class="muted small">Once connected, the extension's own settings page becomes read-only and says it is managed by this app.</p>
+          <h2 id="blockedCount">Blocked right now</h2>
+          <p class="muted small" id="policyStatus"></p>
+          <ul class="blocked-now" id="blockedNow"></ul>
+        </div>
+        <div class="card">
+          <h2>Always on in every browser</h2>
+          <ul class="always">
+            <li>SafeSearch in Google and Bing, and YouTube Restricted Mode</li>
+            <li>Incognito, InPrivate and guest windows are off</li>
+            <li>Secure DNS is off, so blocked sites can't be reached through another DNS service</li>
+            <li>Tor windows in Brave are off</li>
+          </ul>
         </div>
       </section>
 

@@ -142,3 +142,6 @@ input:not([type]) { flex: 1; min-width: 200px; }
   main { padding: 16px; }
   .log li { grid-template-columns: 1fr; gap: 0; }
 }
+
+.blocked-now { columns: 3 180px; margin: 12px 0 0; padding-left: 18px; font-size: .9em; }
+.blocked-now li { break-inside: avoid; }

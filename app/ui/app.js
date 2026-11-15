@@ -109,11 +109,13 @@ function renderWeek(container, schedule, now) {
 
 // ---- overview --------------------------------------------------------------
 
-function browserChip(name) {
-  const info = view.browsers[name];
-  const fresh = info && view.now - info.lastSeen < 3 * 60 * 1000;
-  return el('span', { class: 'chip' }, el('span', { class: 'dot ' + (fresh ? 'ok' : info ? 'warn' : '') }),
-    name + (fresh ? ' connected' : info ? ' last seen ' + left(view.now - info.lastSeen) + ' ago' : ' not set up'));
+// Whether the service managed to write the browser policies.
+function policyChip() {
+  const p = view.policy || {};
+  if (p.development) return el('span', { class: 'chip' }, el('span', { class: 'dot' }), 'Test mode: browsers not changed');
+  if (p.ok === false) return el('span', { class: 'chip' }, el('span', { class: 'dot warn' }), 'Browser policies not written');
+  if (p.ok) return el('span', { class: 'chip' }, el('span', { class: 'dot ok' }), 'Chrome, Brave and Edge following');
+  return el('span', { class: 'chip' }, el('span', { class: 'dot' }), 'Starting');
 }
 
 function renderOverview() {
@@ -144,8 +146,7 @@ function renderOverview() {
   $('heroDetail').textContent = detail;
   $('heroChips').replaceChildren(...[
     view.pending.length ? el('span', { class: 'chip' }, el('span', { class: 'dot warn' }), view.pending.length + ' waiting') : null,
-    browserChip('Chrome'),
-    browserChip('Brave')
+    policyChip()
   ].filter(Boolean));
 
   $('enabled').checked = settings.enabled;
@@ -285,16 +286,6 @@ function renderLists() {
       el('button', { class: 'danger', disabled: strict, onclick: () => change({ type: 'removeSite', site: s.site }) }, 'Remove')));
   }
 
-  const words = $('keywordList');
-  words.replaceChildren();
-  if (!lists.keywords.length) words.append(el('li', { class: 'empty' }, 'No keywords of your own yet.'));
-  for (const k of lists.keywords) {
-    const waiting = pendingFor(ch => ch.keyword === k);
-    words.append(el('li', {},
-      el('span', { class: 'site' }, k),
-      waiting ? el('span', { class: 'tag' }, 'removed in ' + left(waiting.applyAt - view.now)) : null,
-      el('button', { class: 'danger', disabled: strict, onclick: () => change({ type: 'removeKeyword', keyword: k }) }, 'Remove')));
-  }
 }
 
 $('siteForm').addEventListener('submit', async e => {
@@ -303,11 +294,6 @@ $('siteForm').addEventListener('submit', async e => {
     $('siteInput').value = '';
     $('siteAlways').checked = false;
   }
-});
-
-$('keywordForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  if (await change({ type: 'addKeyword', keyword: $('keywordInput').value })) $('keywordInput').value = '';
 });
 
 // ---- strict ----------------------------------------------------------------
@@ -369,18 +355,20 @@ $('rearm').addEventListener('click', () => change({ type: 'rearm' }));
 // ---- browsers & history ------------------------------------------------------
 
 function renderBrowsers() {
-  $('browserCards').replaceChildren(...['Chrome', 'Brave'].map(name => {
-    const info = view.browsers[name];
-    const fresh = info && view.now - info.lastSeen < 3 * 60 * 1000;
-    return el('div', { class: 'card' },
-      el('h2', {}, name),
-      el('p', {}, el('span', { class: 'chip' }, el('span', { class: 'dot ' + (fresh ? 'ok' : info ? 'warn' : '') }),
-        fresh ? 'Connected' : info ? 'Not seen for ' + left(view.now - info.lastSeen) : 'Not set up yet')),
-      info ? el('p', { class: 'muted small' }, 'Extension ' + (info.version || '') + ', last check ' + when(info.lastSeen)) : null);
-  }));
+  const p = view.policy || {};
+  const status = p.development ? 'Test mode: the browsers are not changed while the app runs without the Focus Lock service.'
+    : p.ok === false ? 'The service could not write the browser policies: ' + (p.error || 'unknown error') + '.'
+    : p.ok ? 'Up to date. Last written ' + when(p.appliedAt) + '.'
+    : 'Starting.';
+  $('browserCards').replaceChildren(...['Chrome', 'Brave', 'Edge'].map(name => el('div', { class: 'card' },
+    el('h2', {}, name),
+    el('p', {}, el('span', { class: 'chip' }, el('span', { class: 'dot ' + (p.ok ? 'ok' : p.ok === false ? 'warn' : '') }),
+      p.ok ? 'Following Focus Lock' : p.ok === false ? 'Not updated' : 'Waiting')))));
+  $('policyStatus').textContent = status;
+  const list = $('blockedNow');
+  list.replaceChildren(...(view.blockedNow || []).map(site => el('li', {}, site)));
+  $('blockedCount').textContent = (view.blockedNow || []).length + ' sites blocked right now';
 }
-
-$('openExtension').addEventListener('click', () => api.openExtensionFolder());
 
 function renderHistory() {
   const list = $('logList');

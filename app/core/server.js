@@ -1,13 +1,11 @@
-// A small HTTP server on 127.0.0.1. The browser extension reads the current
-// settings from it, and the app window reads the full view and asks for
-// changes. Every change goes through the rules engine, so nothing that
-// talks to this server can do more than the app window can.
+// A small HTTP server on 127.0.0.1 that the app window uses to read the
+// settings and ask for changes. Every change goes through the rules engine,
+// so nothing that talks to this server can do more than the app window can.
 'use strict';
 
 const http = require('node:http');
 
 const PORT = 47821;
-const KNOWN_BROWSERS = ['Chrome', 'Brave'];
 const MAX_BODY = 64 * 1024;
 
 // Header the app sends with every change. Web pages can't add custom headers
@@ -33,7 +31,7 @@ function readBody(req) {
   });
 }
 
-// engine: { payload(), view(), change(change), seen(browser, info) }
+// engine: { view(), change(change) }
 function createServer({ engine, port = PORT, host = '127.0.0.1' }) {
   const server = http.createServer(async (req, res) => {
     const send = (status, body) => {
@@ -47,14 +45,6 @@ function createServer({ engine, port = PORT, host = '127.0.0.1' }) {
     if (hostHeader !== '127.0.0.1:' + actual && hostHeader !== 'localhost:' + actual) return send(421);
 
     const url = new URL(req.url, 'http://127.0.0.1');
-
-    if (req.method === 'GET' && url.pathname === '/v1/state') {
-      const browser = url.searchParams.get('browser');
-      if (KNOWN_BROWSERS.includes(browser)) {
-        engine.seen(browser, { version: String(url.searchParams.get('version') || '').slice(0, 20) });
-      }
-      return send(200, engine.payload());
-    }
 
     const fromApp = req.headers[CLIENT_HEADER] === '1' && !req.headers.origin;
     if (req.method === 'GET' && url.pathname === '/v1/view') {

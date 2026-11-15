@@ -7,7 +7,7 @@
 <service>
   <id>FocusLock</id>
   <name>Focus Lock</name>
-  <description>Keeps the Focus Lock settings and serves them to the Focus Lock app and the Chrome and Brave extension.</description>
+  <description>Keeps the Focus Lock settings, writes the Chrome, Brave and Edge block-list policies, and serves the Focus Lock app.</description>
   <executable>%BASE%\..\..\Focus Lock.exe</executable>
   <arguments>"%BASE%\..\app\service.js"</arguments>
   <env name="ELECTRON_RUN_AS_NODE" value="1"/>

@@ -10,8 +10,8 @@ const UNLOCK_DELAY = 72 * HOUR;
 const MAX_STRICT = 365 * DAY;
 const LOG_LIMIT = 50;
 
-// Lists the user can switch on and off. The ids match the genre names in
-// extension/default-config.json (YouTube is handled separately there).
+// Lists the user can switch on and off. The sites in each are in
+// core/blocklists.json.
 const CATEGORIES = [
   { id: 'youtube', label: 'YouTube', detail: 'All of YouTube, including Shorts' },
   { id: 'social-media', label: 'Social media', detail: 'Facebook, Instagram, TikTok, X, Reddit, Snapchat and more' },
@@ -22,9 +22,10 @@ const CATEGORIES = [
 
 // Always blocked while the blocker is on. Shown in the app but not editable.
 const ALWAYS_ON = [
-  'Adult sites and keywords',
-  'Pirate streaming sites and keywords (123movies, fmovies, soap2day and others)',
-  'Google SafeSearch is forced on'
+  'Adult sites',
+  'Known pirate streaming sites (fmovies, soap2day, 123movies and others)',
+  'SafeSearch in Google and Bing, and YouTube Restricted Mode',
+  'Incognito, InPrivate and guest windows are turned off'
 ];
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -35,10 +36,9 @@ function defaultState() {
   return {
     version: 1,
     settings: { enabled: true, schedule: [], strictUntil: null, unlockAt: null, lastStrictLength: null },
-    lists: { categories, sites: [], keywords: [] },
+    lists: { categories, sites: [] },
     pending: [],
-    log: [],
-    browsers: {}
+    log: []
   };
 }
 
@@ -55,12 +55,10 @@ function normalize(state) {
     settings: { ...base.settings, ...(s.settings || {}) },
     lists: {
       categories: { ...base.lists.categories, ...((s.lists || {}).categories || {}) },
-      sites: Array.isArray((s.lists || {}).sites) ? s.lists.sites : [],
-      keywords: Array.isArray((s.lists || {}).keywords) ? s.lists.keywords : []
+      sites: Array.isArray((s.lists || {}).sites) ? s.lists.sites : []
     },
     pending: Array.isArray(s.pending) ? s.pending : [],
-    log: Array.isArray(s.log) ? s.log : [],
-    browsers: s.browsers && typeof s.browsers === 'object' ? s.browsers : {}
+    log: Array.isArray(s.log) ? s.log : []
   };
 }
 
@@ -72,7 +70,7 @@ function minutesOf(hhmm) {
 }
 
 // Which minutes of the week (Sunday 00:00 = 0) a schedule blocks. Same
-// meaning as isBlockingActive in extension/lib/match.js: a window that ends
+// meaning everywhere in Focus Lock: a window that ends
 // before it starts runs past midnight, and start === end is the whole day.
 function coverage(schedule) {
   const week = new Uint8Array(7 * 1440);
@@ -132,12 +130,6 @@ function cleanSite(input) {
   return s;
 }
 
-function cleanKeyword(input) {
-  const k = String(input || '').trim().toLowerCase().replace(/\s+/g, ' ');
-  if (k.length < 3) throw new Error('Keywords need at least 3 letters, so they do not block too much by accident.');
-  return k;
-}
-
 // ---- Strict mode ---------------------------------------------------------
 
 function isStrict(settings, now) {
@@ -170,7 +162,6 @@ function targetOf(change) {
     case 'enabled': return 'enabled';
     case 'category': return 'category:' + change.id;
     case 'addSite': case 'removeSite': case 'setSiteAlways': return 'site:' + change.site;
-    case 'addKeyword': case 'removeKeyword': return 'keyword:' + change.keyword;
     default: return null;
   }
 }
@@ -215,14 +206,6 @@ function classify(state, raw) {
         summary: change.always ? 'Block ' + change.site + ' all the time' : 'Block ' + change.site + ' only during blocking hours'
       };
     }
-    case 'addKeyword':
-      change.keyword = cleanKeyword(change.keyword);
-      if (lists.keywords.includes(change.keyword)) throw new Error('"' + change.keyword + '" is already on your list.');
-      return { change, loosens: false, summary: 'Block the keyword "' + change.keyword + '"' };
-    case 'removeKeyword':
-      change.keyword = cleanKeyword(change.keyword);
-      if (!lists.keywords.includes(change.keyword)) throw new Error('"' + change.keyword + '" is not on your list.');
-      return { change, loosens: true, summary: 'Remove the keyword "' + change.keyword + '"' };
     default:
       throw new Error('Unknown change.');
   }
@@ -243,8 +226,6 @@ function commit(state, change) {
     case 'setSiteAlways':
       lists.sites = lists.sites.map(s => (s.site === change.site ? { ...s, always: change.always } : s));
       break;
-    case 'addKeyword': if (!lists.keywords.includes(change.keyword)) lists.keywords.push(change.keyword); break;
-    case 'removeKeyword': lists.keywords = lists.keywords.filter(k => k !== change.keyword); break;
   }
 }
 
@@ -362,12 +343,6 @@ function apply(input, change, now) {
   return { state, outcome: 'queued', message: summary + ' will happen ' + when(applyAt) + '. Looser changes wait 24 hours. You can cancel it until then.' };
 }
 
-// What the extension needs: the settings and lists as they are right now.
-function extensionPayload(state, now) {
-  const s = settle(state, now);
-  return { version: 1, settings: s.settings, lists: s.lists, serverTime: now };
-}
-
 // Everything the window shows.
 function view(state, now) {
   const s = settle(state, now);
@@ -377,7 +352,6 @@ function view(state, now) {
     lists: s.lists,
     pending: s.pending.slice().sort((a, b) => a.applyAt - b.applyAt),
     log: s.log,
-    browsers: s.browsers,
     strict,
     blockingNow: s.settings.enabled && isBlockingActive(s.settings.schedule, new Date(now)),
     categories: CATEGORIES,
@@ -399,11 +373,9 @@ module.exports = {
   scheduleCovers,
   isBlockingActive,
   cleanSite,
-  cleanKeyword,
   isStrict,
   classify,
   settle,
   apply,
-  extensionPayload,
   view
 };

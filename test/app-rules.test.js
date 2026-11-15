@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const r = require('../app/core/rules.js');
-const m = require('../extension/lib/match.js');
+const policy = require('../app/core/policy.js');
 const { createServer, CLIENT_HEADER } = require('../app/core/server.js');
 const { createEngine } = require('../app/core/engine.js');
 const { createStore } = require('../app/core/store.js');
@@ -100,14 +100,6 @@ test('sites: adding is instant, removing waits', () => {
   assert.deepEqual(r.settle(state, NOW + DAY).lists.sites, []);
 });
 
-test('keywords need 3 letters, adding is instant, removing waits', () => {
-  assert.throws(() => run(withHours(), { type: 'addKeyword', keyword: 'tv' }), /3 letters/);
-  let { state } = run(withHours(), { type: 'addKeyword', keyword: '  Full  Episode ' });
-  assert.deepEqual(state.lists.keywords, ['full episode']);
-  const result = run(state, { type: 'removeKeyword', keyword: 'full episode' });
-  assert.equal(result.outcome, 'queued');
-});
-
 test('strict mode needs hours and the blocker on', () => {
   assert.throws(() => run(r.defaultState(), { type: 'startStrict', until: NOW + DAY }), /blocking hours/);
   assert.throws(() => run(withHours(), { type: 'startStrict', until: NOW - 1 }), /future/);
@@ -167,40 +159,63 @@ test('early unlock is refused when strict mode ends within 72 hours anyway', () 
   assert.throws(() => run(state, { type: 'requestUnlock' }), /within 72 hours/);
 });
 
-test('schedule coverage matches the extension, including past midnight', () => {
+test('schedule coverage, including past midnight', () => {
   const night = [{ days: [5], start: '22:00', end: '02:00' }];
-  const fri = new Date(2026, 10, 20, 23, 0);
-  const sat = new Date(2026, 10, 21, 1, 0);
-  const satLate = new Date(2026, 10, 21, 3, 0);
-  for (const d of [fri, sat, satLate]) {
-    assert.equal(r.isBlockingActive(night, d), m.isBlockingActive(night, d));
-  }
-  assert.equal(r.isBlockingActive(night, sat), true);
+  assert.equal(r.isBlockingActive(night, new Date(2026, 10, 20, 23, 0)), true);
+  assert.equal(r.isBlockingActive(night, new Date(2026, 10, 21, 1, 0)), true);
+  assert.equal(r.isBlockingActive(night, new Date(2026, 10, 21, 3, 0)), false);
   assert.equal(r.scheduleCovers([{ days: [5, 6], start: '00:00', end: '00:00' }], night), true);
   assert.equal(r.scheduleCovers([{ days: [5], start: '22:00', end: '23:59' }], night), false);
-  assert.deepEqual([...r.coverage(night)], [...m.coverage(night)]);
 });
 
-test('the payload for the extension makes a config the extension can use', () => {
+test('browser block list follows the hours, the lists and your sites', () => {
   let { state } = run(withHours(), { type: 'addSite', site: 'example.com' });
-  ({ state } = run(state, { type: 'addSite', site: 'always.example', always: true }));
-  ({ state } = run(state, { type: 'addKeyword', keyword: 'full episode' }));
-  state.lists.categories.youtube = false;
-  const payload = r.extensionPayload(state, NOW);
-  const base = JSON.parse(fs.readFileSync(path.join(__dirname, '../extension/default-config.json'), 'utf8'));
-  const cfg = m.applyAppLists(base, payload.lists);
-  const during = m.effectiveConfig(cfg, true, true);
-  const outside = m.effectiveConfig(cfg, true, false);
-  assert.equal(m.siteBlockReason('https://example.com/', during), 'website: example.com');
-  assert.equal(m.siteBlockReason('https://example.com/', outside), null);
-  assert.equal(m.siteBlockReason('https://always.example/', outside), 'website: always.example');
-  assert.equal(m.siteBlockReason('https://www.youtube.com/watch?v=1', during), null);
-  assert.match(m.siteBlockReason('https://www.google.com/search?q=full+episode', during), /keyword/);
-  assert.equal(m.siteBlockReason('https://www.netflix.com/', during), 'genre: video-streaming');
-  assert.equal(m.siteBlockReason('https://pornhub.com/', outside), 'genre: adult');
+  ({ state } = run(state, { type: 'addSite', site: 'https://always.example/watch', always: true }));
+  ({ state } = run(state, { type: 'category', id: 'sports-streaming', on: true }));
+  const during = policy.blocklist(state, NOW); // Monday 10:00, inside the hours
+  const evening = NOW + 10 * HOUR; // Monday 20:00, outside
+  const outside = policy.blocklist(state, evening);
+  for (const site of ['youtube.com', 'netflix.com', 'instagram.com', 'crunchyroll.com', 'example.com', 'amazon.com/gp/video']) {
+    assert.ok(during.includes(site), site);
+    assert.ok(!outside.includes(site), site);
+  }
+  for (const site of ['pornhub.com', 'fmovies.to', 'reddit.com/r/piracy', 'always.example/watch']) {
+    assert.ok(during.includes(site), site);
+    assert.ok(outside.includes(site), site);
+  }
+  // A list switched off (after its 24 hours) is no longer blocked.
+  ({ state } = run(state, { type: 'category', id: 'youtube', on: false }));
+  assert.ok(policy.blocklist(state, NOW).includes('youtube.com'));
+  assert.ok(!policy.blocklist(state, NOW + DAY).includes('youtube.com'));
+  // Blocker off: nothing in the list.
+  ({ state } = run(state, { type: 'enabled', enabled: false }));
+  assert.deepEqual(policy.blocklist(state, NOW + 2 * DAY), []);
+  // No hours set yet: only the always-on lists.
+  const fresh = policy.blocklist(r.defaultState(), NOW);
+  assert.ok(fresh.includes('pornhub.com') && !fresh.includes('youtube.com'));
 });
 
-test('the local server serves the extension and the app, and refuses web pages', async () => {
+test('browser policies: fixed values for each browser and a valid .reg file', () => {
+  const p = policy.desiredPolicies(withHours(), NOW);
+  assert.deepEqual(p.map(b => b.name), ['Chrome', 'Brave', 'Edge']);
+  const chrome = p[0].values;
+  assert.equal(chrome.IncognitoModeAvailability, 1);
+  assert.equal(chrome.DnsOverHttpsMode, 'off');
+  assert.equal(chrome.ForceGoogleSafeSearch, 1);
+  assert.equal(chrome.ForceYouTubeRestrict, 2);
+  assert.equal(p[1].values.TorDisabled, 1);
+  assert.equal(p[2].values.InPrivateModeAvailability, 1);
+  assert.equal(p[2].values.IncognitoModeAvailability, undefined);
+  const reg = policy.toRegFile(p);
+  assert.ok(reg.startsWith('Windows Registry Editor Version 5.00\r\n'));
+  assert.ok(reg.includes('[HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Google\\Chrome]\r\n"BrowserGuestModeEnabled"=dword:00000000'));
+  assert.ok(reg.includes('[-HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Microsoft\\Edge\\URLBlocklist]'));
+  assert.ok(reg.includes('"DnsOverHttpsMode"="off"'));
+  assert.match(reg, /"1"="[a-z0-9./-]+"/);
+  assert.ok(!/[^\r]\n/.test(reg), 'Windows line endings only');
+});
+
+test('the local server serves the app window and refuses web pages', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'focuslock-'));
   const engine = createEngine(path.join(dir, 'state.json'), { now: () => NOW });
   const srv = createServer({ engine, port: 0 });
@@ -208,14 +223,13 @@ test('the local server serves the extension and the app, and refuses web pages',
   const base = `http://127.0.0.1:${port}`;
   const app = { [CLIENT_HEADER]: '1' };
   try {
-    const ext = await fetch(`${base}/v1/state?browser=Brave&version=0.3.0`);
-    assert.equal(ext.status, 200);
-    assert.deepEqual((await ext.json()).settings.schedule, []);
-    assert.equal(ext.headers.get('access-control-allow-origin'), null);
-    assert.ok(engine.view().browsers.Brave);
+    assert.equal((await fetch(`${base}/v1/state`)).status, 404);
 
     // The app window can read the view and make changes.
-    assert.equal((await fetch(`${base}/v1/view`, { headers: app })).status, 200);
+    const view = await fetch(`${base}/v1/view`, { headers: app });
+    assert.equal(view.status, 200);
+    assert.equal(view.headers.get('access-control-allow-origin'), null);
+    assert.ok((await view.json()).blockedNow.includes('pornhub.com'));
     const post = body => fetch(`${base}/v1/change`, {
       method: 'POST', headers: { ...app, 'Content-Type': 'application/json' }, body: JSON.stringify(body)
     }).then(r => r.json());
@@ -232,7 +246,7 @@ test('the local server serves the extension and the app, and refuses web pages',
       method: 'POST', headers: { ...app, 'Content-Type': 'application/json', Origin: 'https://evil.example' }, body: '{}'
     })).status, 403);
     const rebound = await new Promise((resolve, reject) => {
-      require('node:http').get({ host: '127.0.0.1', port, path: '/v1/state', headers: { Host: 'evil.example' } },
+      require('node:http').get({ host: '127.0.0.1', port, path: '/v1/view', headers: { Host: 'evil.example', [CLIENT_HEADER]: '1' } },
         res => { res.resume(); resolve(res.statusCode); }).on('error', reject);
     });
     assert.equal(rebound, 421);

@@ -1,0 +1,92 @@
+{
+  "_comment": "Sites Focus Lock blocks through Chrome, Brave and Edge policy. A bare domain also blocks its subdomains; domain/path blocks that part of a site. 'categories' apply during the blocking hours when switched on in the app. 'always' apply whenever the blocker is on.",
+  "categories": {
+    "youtube": [
+      "youtube.com",
+      "youtu.be",
+      "youtube-nocookie.com"
+    ],
+    "social-media": [
+      "facebook.com",
+      "instagram.com",
+      "tiktok.com",
+      "x.com",
+      "twitter.com",
+      "reddit.com",
+      "snapchat.com",
+      "threads.net",
+      "tumblr.com",
+      "pinterest.com",
+      "9gag.com"
+    ],
+    "video-streaming": [
+      "netflix.com",
+      "primevideo.com",
+      "disneyplus.com",
+      "hulu.com",
+      "max.com",
+      "tv.apple.com",
+      "twitch.tv",
+      "peacocktv.com",
+      "paramountplus.com",
+      "nowtv.com",
+      "plex.tv",
+      "pluto.tv",
+      "tubitv.com",
+      "amazon.com/gp/video",
+      "amazon.co.uk/gp/video"
+    ],
+    "anime-streaming": [
+      "crunchyroll.com",
+      "funimation.com",
+      "hidive.com"
+    ],
+    "sports-streaming": [
+      "dazn.com",
+      "espn.com"
+    ]
+  },
+  "always": {
+    "adult": [
+      "pornhub.com",
+      "xvideos.com",
+      "xnxx.com",
+      "xhamster.com",
+      "redtube.com",
+      "youporn.com",
+      "spankbang.com",
+      "eporner.com",
+      "onlyfans.com",
+      "chaturbate.com",
+      "stripchat.com",
+      "cam4.com",
+      "rule34.xxx",
+      "e-hentai.org",
+      "nhentai.net"
+    ],
+    "pirate": [
+      "fmovies.to",
+      "fmovies24.to",
+      "fmovies.ps",
+      "soap2day.to",
+      "soap2day.rs",
+      "123moviesfree.net",
+      "putlocker.vip",
+      "gomovies.sx",
+      "solarmovie.pe",
+      "yesmovies.ag",
+      "lookmovie2.to",
+      "hdtoday.tv",
+      "sflix.to",
+      "myflixer.to",
+      "bflix.to",
+      "aniwave.to",
+      "hianime.to",
+      "9anime.to",
+      "gogoanime3.co",
+      "kissasian.lu",
+      "reddit.com/r/fmovies",
+      "reddit.com/r/piracy"
+    ]
+  }
+}

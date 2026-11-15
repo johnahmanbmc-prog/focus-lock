@@ -1,7 +1,7 @@
 #Requires -RunAsAdministrator
 <#
-  Removes what install.ps1 set up: the service, the browser policies and the
-  settings folder. The uninstaller runs this. On an update it runs with
+  Removes what install.ps1 and the service set up: the service, the browser
+  policies, the browser block and the settings folder. The uninstaller runs this. On an update it runs with
   -KeepSettings, which only stops the service.
 #>
 param([switch]$KeepSettings)
@@ -19,17 +19,11 @@ if (Get-Service -Name FocusLock -ErrorAction SilentlyContinue) {
 }
 if ($KeepSettings) { exit 0 }
 
-$idFile = Join-Path $data 'extension-id.txt'
-$id = if (Test-Path $idFile) { (Get-Content $idFile -Raw).Trim() } else { '' }
-foreach ($key in 'HKLM:\SOFTWARE\Policies\Google\Chrome', 'HKLM:\SOFTWARE\Policies\BraveSoftware\Brave') {
+# Remove the browser policies the service wrote.
+foreach ($key in 'HKLM:\SOFTWARE\Policies\Google\Chrome', 'HKLM:\SOFTWARE\Policies\BraveSoftware\Brave', 'HKLM:\SOFTWARE\Policies\Microsoft\Edge') {
   if (-not (Test-Path $key)) { continue }
-  $list = Join-Path $key 'ExtensionInstallForcelist'
-  if ($id -and (Test-Path $list)) {
-    $props = Get-ItemProperty -Path $list
-    $props.PSObject.Properties | Where-Object { $_.Name -match '^\d+$' -and $_.Value -like "$id*" } |
-      ForEach-Object { Remove-ItemProperty -Path $list -Name $_.Name }
-  }
-  foreach ($name in 'IncognitoModeAvailability', 'BrowserGuestModeEnabled', 'TorDisabled') {
+  Remove-Item -Path (Join-Path $key 'URLBlocklist') -Recurse -Force -ErrorAction SilentlyContinue
+  foreach ($name in 'BrowserGuestModeEnabled', 'DnsOverHttpsMode', 'ForceGoogleSafeSearch', 'ForceYouTubeRestrict', 'IncognitoModeAvailability', 'TorDisabled', 'InPrivateModeAvailability', 'ForceBingSafeSearch') {
     Remove-ItemProperty -Path $key -Name $name -ErrorAction SilentlyContinue
   }
 }

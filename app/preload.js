@@ -8,6 +8,5 @@ contextBridge.exposeInMainWorld('focusLock', {
   getState: () => ipcRenderer.invoke('getState'),
   change: change => ipcRenderer.invoke('change', change),
   confirm: (message, detail) => ipcRenderer.invoke('confirm', message, detail),
-  openExtensionFolder: () => ipcRenderer.invoke('openExtensionFolder'),
   onState: callback => ipcRenderer.on('state', (event, view) => callback(view))
 });
