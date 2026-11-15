@@ -32,8 +32,12 @@ const STATIC_NAMES = [...new Set(Object.values(STATIC).flatMap(o => Object.keys(
 
 // "https://www.Example.com/x" -> "example.com/x", the URLBlocklist format.
 // A bare domain also blocks its subdomains.
+// Only the host is lowercased: paths are case-sensitive in URLBlocklist, so
+// both reddit.com/r/Piracy and reddit.com/r/piracy are listed.
 function entry(value) {
-  return String(value || '').trim().toLowerCase().replace(/^[a-z]+:\/\//, '').replace(/^www\./, '').replace(/^\*?\./, '');
+  const bare = String(value || '').trim().replace(/^[a-z]+:\/\//i, '').replace(/^www\./i, '').replace(/^\*?\./, '');
+  const slash = bare.indexOf('/');
+  return slash < 0 ? bare.toLowerCase() : bare.slice(0, slash).toLowerCase() + bare.slice(slash);
 }
 
 // The URLBlocklist for this moment: the always-on lists and the user's
