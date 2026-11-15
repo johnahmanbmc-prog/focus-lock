@@ -9,7 +9,7 @@ Focus Lock is a desktop app plus a Windows service. The service writes Chrome, B
 ## What it does
 
 - **Blocking hours:** you set the days and times. There are no default hours. During those hours YouTube, social media, streaming (Netflix, Prime Video, Disney+, Twitch and others), anime and sports streaming, and your own sites are blocked. You can switch each list on or off.
-- **Always on**, whenever the blocker is on: adult sites, known pirate streaming sites, and any of your sites marked "all the time".
+- **Always on**, whenever the blocker is on: adult sites (including animated/hentai sites), about 155 pirate streaming sites (a one-time pass over the top 20% of FMHY's streaming lists), FMHY itself and its mirrors, the piracy subreddits (r/Piracy, r/FREEMEDIAHECKYEAH and others), and any of your sites marked "all the time". These are hard blocks that don't depend on SafeSearch.
 - **Always on in every browser:** SafeSearch in Google and Bing, YouTube Restricted Mode, no incognito/InPrivate/guest windows, no secure DNS, and no Tor windows in Brave.
 - **Strict mode:** locks the hours, the lists and the off switch until an end time. You can extend it but not shorten it.
 - **Early unlock:** ends strict mode 72 hours after you ask, unless you cancel. Your settings stay as they are, and **Re-arm** starts strict mode again.

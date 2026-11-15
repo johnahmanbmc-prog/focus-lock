@@ -22,8 +22,8 @@ const CATEGORIES = [
 
 // Always blocked while the blocker is on. Shown in the app but not editable.
 const ALWAYS_ON = [
-  'Adult sites',
-  'Known pirate streaming sites (fmovies, soap2day, 123movies and others)',
+  'Adult sites, including animated (hentai) sites',
+  'Pirate streaming sites, FMHY and its mirrors, and piracy subreddits',
   'SafeSearch in Google and Bing, and YouTube Restricted Mode',
   'Incognito, InPrivate and guest windows are turned off'
 ];

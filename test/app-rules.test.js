@@ -266,3 +266,15 @@ test('the store saves and loads, and survives a broken file', () => {
   assert.deepEqual(store.load(), r.defaultState());
   assert.ok(fs.readdirSync(dir).some(f => f.includes('.broken-')));
 });
+
+test('hard blocks: adult, animated adult, pirate streaming, FMHY and piracy subreddits, at any hour', () => {
+  const outside = policy.blocklist(r.defaultState(), NOW + 10 * HOUR);
+  for (const site of ['pornhub.com', 'xvideos.com', 'hanime.tv', 'nhentai.net', 'movy.sx', 'hianime.to', 'fmhy.net', 'fmhy.pages.dev',
+    'reddit.com/r/FREEMEDIAHECKYEAH', 'reddit.com/r/Piracy', 'reddit.com/r/piracy']) {
+    assert.ok(outside.includes(site), site);
+  }
+  // Only the piracy subreddits, not all of Reddit, outside the hours.
+  assert.ok(!outside.includes('reddit.com'));
+  // Ordinary sites that happen to be listed on FMHY are not hard-blocked.
+  for (const site of ['justwatch.com', 'loc.gov', 'github.com', 'dailymotion.com']) assert.ok(!outside.includes(site), site);
+});
